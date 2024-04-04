@@ -25,6 +25,7 @@ var root *merkletree.Node
 func main() {
 	const UPLOAD_FILES_CMD = "Upload files"
 	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and verify file"
+	const EXIT_CMD = "Exit"
 
 	fileutil.RemoveDir(FILE_PATH)
 	fileutil.MakeDir(FILE_PATH)
@@ -35,6 +36,7 @@ func main() {
 		commands := []string{
 			UPLOAD_FILES_CMD,
 			DOWNLOAD_AND_VERIFY_FILE_CMD,
+			EXIT_CMD,
 		}
 
 		prompt := promptui.Select{
@@ -54,6 +56,9 @@ func main() {
 			uploadFiles()
 		case DOWNLOAD_AND_VERIFY_FILE_CMD:
 			downloadAndVerifyFile()
+		case EXIT_CMD:
+			fmt.Println("Goodbye!")
+			os.Exit(0)
 		}
 
 		fmt.Println()
@@ -98,6 +103,11 @@ func uploadFiles() {
 }
 
 func downloadAndVerifyFile() {
+	if root == nil {
+		fmt.Println("You need to upload files first")
+		return
+	}
+
 	prompt := promptui.Prompt{
 		Label: "Enter file id",
 	}
