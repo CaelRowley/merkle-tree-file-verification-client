@@ -1,26 +1,23 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log"
-	"mime"
-	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/manifoldco/promptui"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/api"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/fileutil"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/merkletree"
 )
 
 const FILE_PATH = "testfiles"
 const DOWNLOAD_PATH = "downloads"
+
+const BACKEND_URL = "http://localhost:8080"
 
 var root *merkletree.Node
 
@@ -95,7 +92,7 @@ func uploadFilesCmd() {
 	rootHash := hex.EncodeToString(root.Hash[:])
 	fmt.Printf("Generated merkle tree with root hash: %s\n", rootHash)
 
-	err = deleteAllFiles()
+	err = api.DeleteAllFiles(BACKEND_URL)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -103,7 +100,7 @@ func uploadFilesCmd() {
 
 	fmt.Println("Deleted all files in the DB!")
 
-	err = sendFiles(files)
+	err = api.SendFiles(BACKEND_URL, files)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -131,12 +128,12 @@ func downloadAndVerifyFileCmd() {
 		return
 	}
 
-	file, err := getFile(input, DOWNLOAD_PATH)
+	file, err := api.GetFile(BACKEND_URL, input, DOWNLOAD_PATH)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	proof, err := getProof(input)
+	proof, err := api.GetProof(BACKEND_URL, input)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -155,89 +152,4 @@ func downloadAndVerifyFileCmd() {
 func exitCmd() {
 	fmt.Println("Goodbye!")
 	os.Exit(0)
-}
-
-func sendFiles(files []fileutil.File) error {
-	requestUrl := "http://localhost:8080/files/upload"
-	jsonData, err := json.Marshal(files)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server responded with non-OK status: %d", resp.StatusCode)
-	}
-
-	return nil
-}
-
-func getProof(id string) (merkletree.MerkleProof, error) {
-	requestUrl := fmt.Sprintf("http://localhost:8080/files/get-proof/%s", id)
-	response, err := http.Get(requestUrl)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var proof merkletree.MerkleProof
-	err = json.Unmarshal(body, &proof)
-	if err != nil {
-		return nil, err
-	}
-
-	return proof, nil
-}
-
-func getFile(id string, path string) ([]byte, error) {
-	requestUrl := fmt.Sprintf("http://localhost:8080/files/download/%s", id)
-
-	response, err := http.Get(requestUrl)
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode == http.StatusNotFound {
-		return nil, errors.New("No file found for id: " + id)
-	}
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	_, params, err := mime.ParseMediaType(response.Header["Content-Disposition"][0])
-	if err != nil {
-		return nil, err
-	}
-	filename := params["filename"]
-
-	err = os.WriteFile(path+"/"+filename, body, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
-}
-
-func deleteAllFiles() error {
-	requestUrl := "http://localhost:8080/files/delete-all"
-	response, err := http.Post(requestUrl, "application/json", nil)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	return nil
 }
