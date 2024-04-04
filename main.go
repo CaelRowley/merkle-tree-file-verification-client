@@ -17,32 +17,34 @@ import (
 const FILE_PATH = "testfiles"
 const DOWNLOAD_PATH = "downloads"
 
-const BACKEND_URL = "http://localhost:8080"
+var (
+	serverURL = os.Getenv("SERVER_URL")
+)
 
 var root *merkletree.Node
 
 func main() {
+	cleanFiles()
+	if serverURL == "" {
+		serverURL = "http://localhost:8080"
+	}
+
 	const UPLOAD_FILES_CMD = "Upload files"
 	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and verify file"
 	const EXIT_CMD = "Exit"
 
-	fileutil.RemoveDir(FILE_PATH)
-	fileutil.MakeDir(FILE_PATH)
-	fileutil.RemoveDir(DOWNLOAD_PATH)
-	fileutil.MakeDir(DOWNLOAD_PATH)
+	commands := []string{
+		UPLOAD_FILES_CMD,
+		DOWNLOAD_AND_VERIFY_FILE_CMD,
+		EXIT_CMD,
+	}
+
+	prompt := promptui.Select{
+		Label: "Select a command",
+		Items: commands,
+	}
 
 	for {
-		commands := []string{
-			UPLOAD_FILES_CMD,
-			DOWNLOAD_AND_VERIFY_FILE_CMD,
-			EXIT_CMD,
-		}
-
-		prompt := promptui.Select{
-			Label: "Select a command",
-			Items: commands,
-		}
-
 		_, selected, err := prompt.Run()
 		if err != nil {
 			log.Fatal(err)
@@ -92,7 +94,7 @@ func uploadFilesCmd() {
 	rootHash := hex.EncodeToString(root.Hash[:])
 	fmt.Printf("Generated merkle tree with root hash: %s\n", rootHash)
 
-	err = api.DeleteAllFiles(BACKEND_URL)
+	err = api.DeleteAllFiles(serverURL)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -100,7 +102,7 @@ func uploadFilesCmd() {
 
 	fmt.Println("Deleted all files in the DB!")
 
-	err = api.SendFiles(BACKEND_URL, files)
+	err = api.SendFiles(serverURL, files)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -128,12 +130,12 @@ func downloadAndVerifyFileCmd() {
 		return
 	}
 
-	file, err := api.GetFile(BACKEND_URL, input, DOWNLOAD_PATH)
+	file, err := api.GetFile(serverURL, input, DOWNLOAD_PATH)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	proof, err := api.GetProof(BACKEND_URL, input)
+	proof, err := api.GetProof(serverURL, input)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -150,6 +152,14 @@ func downloadAndVerifyFileCmd() {
 }
 
 func exitCmd() {
+	cleanFiles()
 	fmt.Println("Goodbye!")
 	os.Exit(0)
+}
+
+func cleanFiles() {
+	fileutil.RemoveDir(FILE_PATH)
+	fileutil.MakeDir(FILE_PATH)
+	fileutil.RemoveDir(DOWNLOAD_PATH)
+	fileutil.MakeDir(DOWNLOAD_PATH)
 }
