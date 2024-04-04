@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,7 +27,6 @@ var root *merkletree.Node
 func main() {
 	const UPLOAD_FILES_CMD = "Upload files"
 	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and verify file"
-	const DELETE_FILES_CMD = "Delete all files in DB"
 	const EXIT_CMD = "Exit"
 
 	fileutil.RemoveDir(FILE_PATH)
@@ -37,7 +38,6 @@ func main() {
 		commands := []string{
 			UPLOAD_FILES_CMD,
 			DOWNLOAD_AND_VERIFY_FILE_CMD,
-			DELETE_FILES_CMD,
 			EXIT_CMD,
 		}
 
@@ -52,20 +52,16 @@ func main() {
 		}
 
 		fmt.Println()
-		fmt.Println("================================")
 
 		switch selected {
 		case UPLOAD_FILES_CMD:
 			uploadFilesCmd()
 		case DOWNLOAD_AND_VERIFY_FILE_CMD:
 			downloadAndVerifyFileCmd()
-		case DELETE_FILES_CMD:
-			deleteAllFilesCmd()
 		case EXIT_CMD:
 			exitCmd()
 		}
 
-		fmt.Println("================================")
 		fmt.Println()
 	}
 }
@@ -93,19 +89,31 @@ func uploadFilesCmd() {
 		fileHash := sha256.Sum256([]byte(file.Data))
 		fileHashes = append(fileHashes, fileHash[:])
 	}
+	fmt.Printf("Created %d files!\n", amount)
 
 	root = merkletree.BuildTree(fileHashes)
+	rootHash := hex.EncodeToString(root.Hash[:])
+	fmt.Printf("Generated merkle tree with root hash: %s\n", rootHash)
+
+	err = deleteAllFiles()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Deleted all files in the DB!")
 
 	err = sendFiles(files)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	fmt.Printf("Uploaded %d files!\n", amount)
 
 	fileutil.RemoveDir(FILE_PATH)
 	fileutil.MakeDir(FILE_PATH)
 
-	fmt.Printf("Uploaded %s files!\n", input)
+	fmt.Println("Deleted all local files!")
 }
 
 func downloadAndVerifyFileCmd() {
@@ -142,16 +150,6 @@ func downloadAndVerifyFileCmd() {
 	} else {
 		fmt.Println("Merkle proof verification failed!\nFile integrity cannot be confirmed.")
 	}
-}
-
-func deleteAllFilesCmd() {
-	err := deleteAllFiles()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println("Deleted all files in the DB!")
 }
 
 func exitCmd() {
@@ -203,11 +201,16 @@ func getProof(id string) (merkletree.MerkleProof, error) {
 
 func getFile(id string, path string) ([]byte, error) {
 	requestUrl := fmt.Sprintf("http://localhost:8080/files/download/%s", id)
+
 	response, err := http.Get(requestUrl)
 	if err != nil {
 		return nil, err
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusNotFound {
+		return nil, errors.New("No file found for id: " + id)
+	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -230,15 +233,11 @@ func getFile(id string, path string) ([]byte, error) {
 
 func deleteAllFiles() error {
 	requestUrl := "http://localhost:8080/files/delete-all"
-	resp, err := http.Post(requestUrl, "application/json", nil)
+	response, err := http.Post(requestUrl, "application/json", nil)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server responded with non-OK status: %d", resp.StatusCode)
-	}
+	defer response.Body.Close()
 
 	return nil
 }
