@@ -31,11 +31,13 @@ func main() {
 
 	const UPLOAD_FILES_CMD = "Upload files"
 	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and verify file"
+	const CORRUPT_FILE_CMD = "Corrupt a file"
 	const EXIT_CMD = "Exit"
 
 	commands := []string{
 		UPLOAD_FILES_CMD,
 		DOWNLOAD_AND_VERIFY_FILE_CMD,
+		CORRUPT_FILE_CMD,
 		EXIT_CMD,
 	}
 
@@ -57,6 +59,8 @@ func main() {
 			uploadFilesCmd()
 		case DOWNLOAD_AND_VERIFY_FILE_CMD:
 			downloadAndVerifyFileCmd()
+		case CORRUPT_FILE_CMD:
+			corruptFileCmd()
 		case EXIT_CMD:
 			exitCmd()
 		}
@@ -71,13 +75,13 @@ func uploadFilesCmd() {
 	}
 	input, err := prompt.Run()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error with prompt:", err)
 		return
 	}
 
 	amount, err := strconv.Atoi(input)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Please enter an integer:", err)
 		return
 	}
 
@@ -96,7 +100,7 @@ func uploadFilesCmd() {
 
 	err = api.DeleteAllFiles(serverURL)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error deleting files in the DB:", err)
 		return
 	}
 
@@ -104,7 +108,7 @@ func uploadFilesCmd() {
 
 	err = api.SendFiles(serverURL, files)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error sending the files to the server:", err)
 		return
 	}
 	fmt.Printf("Uploaded %d files!\n", amount)
@@ -126,18 +130,18 @@ func downloadAndVerifyFileCmd() {
 	}
 	input, err := prompt.Run()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error with prompt:", err)
 		return
 	}
 
 	file, err := api.GetFile(serverURL, input, DOWNLOAD_PATH)
-	if err != nil {
-		fmt.Println(err)
+	if err == nil {
+		fmt.Println("Error getting file with id:", input, ":", err)
 		return
 	}
 	proof, err := api.GetProof(serverURL, input)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error getting proof:", err)
 		return
 	}
 
@@ -149,6 +153,30 @@ func downloadAndVerifyFileCmd() {
 	} else {
 		fmt.Println("Merkle proof verification failed!\nFile integrity cannot be confirmed.")
 	}
+}
+
+func corruptFileCmd() {
+	prompt := promptui.Prompt{
+		Label: "Enter file id",
+	}
+	input, err := prompt.Run()
+	if err != nil {
+		fmt.Println("Error with prompt:", err)
+		return
+	}
+
+	file, err := fileutil.GetFile("corrupt.txt")
+	if err != nil {
+		fmt.Println("Error getting corrupt file:", err)
+		return
+	}
+
+	err = api.CorruptFile(serverURL, input, file)
+	if err != nil {
+		fmt.Println("Error corrupting file in DB:", err)
+		return
+	}
+	fmt.Printf("Corrupted file: %s\n", input)
 }
 
 func exitCmd() {

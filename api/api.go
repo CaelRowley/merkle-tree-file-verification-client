@@ -98,3 +98,23 @@ func DeleteAllFiles(url string) error {
 
 	return nil
 }
+
+func CorruptFile(url string, id string, file []byte) error {
+	requestUrl := fmt.Sprintf("%s/files/corrupt-file/%s", url, id)
+	jsonData, err := json.Marshal(file)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server responded with non-OK status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
