@@ -25,6 +25,8 @@ var root *merkletree.Node
 
 func main() {
 	cleanFiles()
+	fileutil.MakeDir(FILE_PATH)
+	fileutil.MakeDir(DOWNLOAD_PATH)
 	if serverURL == "" {
 		serverURL = "http://localhost:8080"
 	}
