@@ -17,7 +17,7 @@ import (
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/merkletree"
 )
 
-const FILE_PATH = "files"
+const FILE_PATH = "testfiles"
 const DOWNLOAD_PATH = "downloads"
 
 var root *merkletree.Node
@@ -25,6 +25,7 @@ var root *merkletree.Node
 func main() {
 	const UPLOAD_FILES_CMD = "Upload files"
 	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and verify file"
+	const DELETE_FILES_CMD = "Delete all files in DB"
 	const EXIT_CMD = "Exit"
 
 	fileutil.RemoveDir(FILE_PATH)
@@ -36,6 +37,7 @@ func main() {
 		commands := []string{
 			UPLOAD_FILES_CMD,
 			DOWNLOAD_AND_VERIFY_FILE_CMD,
+			DELETE_FILES_CMD,
 			EXIT_CMD,
 		}
 
@@ -50,22 +52,25 @@ func main() {
 		}
 
 		fmt.Println()
+		fmt.Println("================================")
 
 		switch selected {
 		case UPLOAD_FILES_CMD:
-			uploadFiles()
+			uploadFilesCmd()
 		case DOWNLOAD_AND_VERIFY_FILE_CMD:
-			downloadAndVerifyFile()
+			downloadAndVerifyFileCmd()
+		case DELETE_FILES_CMD:
+			deleteAllFilesCmd()
 		case EXIT_CMD:
-			fmt.Println("Goodbye!")
-			os.Exit(0)
+			exitCmd()
 		}
 
+		fmt.Println("================================")
 		fmt.Println()
 	}
 }
 
-func uploadFiles() {
+func uploadFilesCmd() {
 	prompt := promptui.Prompt{
 		Label: "Amount to upload",
 	}
@@ -97,12 +102,13 @@ func uploadFiles() {
 		return
 	}
 
-	fileutil.RemoveDir("files")
+	fileutil.RemoveDir(FILE_PATH)
+	fileutil.MakeDir(FILE_PATH)
 
 	fmt.Printf("Uploaded %s files!\n", input)
 }
 
-func downloadAndVerifyFile() {
+func downloadAndVerifyFileCmd() {
 	if root == nil {
 		fmt.Println("You need to upload files first")
 		return
@@ -117,17 +123,40 @@ func downloadAndVerifyFile() {
 		return
 	}
 
-	file := getFile(input, DOWNLOAD_PATH)
-	proof := getProof(input)
+	file, err := getFile(input, DOWNLOAD_PATH)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	proof, err := getProof(input)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	fileHash := sha256.Sum256(file)
 	fmt.Printf("Downloaded file: %s\n", input)
 
 	if merkletree.VerifyMerkleProof(root.Hash, fileHash[:], proof) {
-		fmt.Println("Merkle proof verification successful: File integrity is confirmed.")
+		fmt.Println("Merkle proof verification successful!\nFile integrity is confirmed.")
 	} else {
-		fmt.Println("Merkle proof verification failed: File integrity cannot be confirmed.")
+		fmt.Println("Merkle proof verification failed!\nFile integrity cannot be confirmed.")
 	}
+}
+
+func deleteAllFilesCmd() {
+	err := deleteAllFiles()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Deleted all files in the DB!")
+}
+
+func exitCmd() {
+	fmt.Println("Goodbye!")
+	os.Exit(0)
 }
 
 func sendFiles(files []fileutil.File) error {
@@ -150,51 +179,66 @@ func sendFiles(files []fileutil.File) error {
 	return nil
 }
 
-func getProof(id string) merkletree.MerkleProof {
+func getProof(id string) (merkletree.MerkleProof, error) {
 	requestUrl := fmt.Sprintf("http://localhost:8080/files/get-proof/%s", id)
 	response, err := http.Get(requestUrl)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal("Error reading response body: " + err.Error())
+		return nil, err
 	}
 
 	var proof merkletree.MerkleProof
 	err = json.Unmarshal(body, &proof)
 	if err != nil {
-		log.Fatal("Error parsing JSON:", err)
+		return nil, err
 	}
 
-	return proof
+	return proof, nil
 }
 
-func getFile(id string, path string) []byte {
+func getFile(id string, path string) ([]byte, error) {
 	requestUrl := fmt.Sprintf("http://localhost:8080/files/download/%s", id)
 	response, err := http.Get(requestUrl)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal("Error reading response body: " + err.Error())
+		return nil, err
 	}
 
 	_, params, err := mime.ParseMediaType(response.Header["Content-Disposition"][0])
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 	filename := params["filename"]
 
 	err = os.WriteFile(path+"/"+filename, body, 0644)
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 
-	return body
+	return body, nil
+}
+
+func deleteAllFiles() error {
+	requestUrl := "http://localhost:8080/files/delete-all"
+	resp, err := http.Post(requestUrl, "application/json", nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server responded with non-OK status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
