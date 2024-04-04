@@ -11,6 +11,8 @@
 !README.md
 !LICENSE
 
+!corrupt.txt
+
 # !Makefile
 
 # ...even if they are in subdirectories

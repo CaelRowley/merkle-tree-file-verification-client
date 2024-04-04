@@ -135,7 +135,7 @@ func downloadAndVerifyFileCmd() {
 	}
 
 	file, err := api.GetFile(serverURL, input, DOWNLOAD_PATH)
-	if err == nil {
+	if err != nil {
 		fmt.Println("Error getting file with id:", input, ":", err)
 		return
 	}
@@ -187,7 +187,5 @@ func exitCmd() {
 
 func cleanFiles() {
 	fileutil.RemoveDir(FILE_PATH)
-	fileutil.MakeDir(FILE_PATH)
 	fileutil.RemoveDir(DOWNLOAD_PATH)
-	fileutil.MakeDir(DOWNLOAD_PATH)
 }
