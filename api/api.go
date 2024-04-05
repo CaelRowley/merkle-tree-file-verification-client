@@ -8,7 +8,6 @@ import (
 	"io"
 	"mime"
 	"net/http"
-	"os"
 
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/fileutil"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/merkletree"
@@ -56,36 +55,31 @@ func GetProof(url string, id string) (merkletree.MerkleProof, error) {
 	return proof, nil
 }
 
-func GetFile(url string, id string, path string) ([]byte, error) {
+func GetFile(url string, id string) (string, []byte, error) {
 	requestUrl := fmt.Sprintf("%s/files/download/%s", url, id)
 
 	response, err := http.Get(requestUrl)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode == http.StatusNotFound {
-		return nil, errors.New("No file found for id: " + id)
+		return "", nil, errors.New("No file found for id: " + id)
 	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 
 	_, params, err := mime.ParseMediaType(response.Header["Content-Disposition"][0])
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	filename := params["filename"]
+	fileName := params["filename"]
 
-	err = os.WriteFile(path+"/"+filename, body, 0644)
-	if err != nil {
-		return nil, err
-	}
-
-	return body, nil
+	return fileName, body, nil
 }
 
 func DeleteAllFiles(url string) error {

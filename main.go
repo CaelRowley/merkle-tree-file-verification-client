@@ -89,7 +89,10 @@ func main() {
 }
 
 func createFilesCmd() {
+	chDeletingFiles := startLoading("Deleting previous test files")
 	deleteTestFiles()
+	endLoading(chDeletingFiles)
+
 	prompt := promptui.Prompt{
 		Label: "Amount to create",
 	}
@@ -109,13 +112,16 @@ func createFilesCmd() {
 	start := time.Now()
 	fileutil.WriteDummyFiles(TEST_FILE_PATH, amount)
 	elapsed := time.Since(start)
-	close(ch)
+	endLoading(ch)
 	fmt.Printf("%d test files created %s\n\n", amount, elapsed)
 }
 
 func createTreeCmd() {
+	start := time.Now()
+	ch := startLoading("Reading files and hashing data")
 	files := fileutil.GetFiles(TEST_FILE_PATH)
 	if len(files) < 1 {
+		endLoading(ch)
 		fmt.Println("Please create some test files first.")
 		return
 	}
@@ -125,26 +131,34 @@ func createTreeCmd() {
 		fileHash := sha256.Sum256([]byte(file.Data))
 		fileHashes = append(fileHashes, fileHash[:])
 	}
+	elapsed := time.Since(start)
+	endLoading(ch)
+	fmt.Printf("Files hashed %s\n", elapsed)
 
-	fmt.Printf("Building Merkle tree...\n")
-	start := time.Now()
+	ch = startLoading("Building tree")
+	start = time.Now()
 	root = merkletree.BuildTree(fileHashes)
 	rootHash := hex.EncodeToString(root.Hash[:])
-	elapsed := time.Since(start)
-	fmt.Printf("Generated Merkle tree with root hash: %s %s\n", rootHash, elapsed)
+	elapsed = time.Since(start)
+	endLoading(ch)
+
+	fmt.Printf("Generated Merkle tree %s\n", elapsed)
+	fmt.Printf("Root hash: %s\n", rootHash)
 }
 
 func uploadFilesCmd() {
-	fmt.Printf("Reading test files...\n")
+	ch := startLoading("Reading test files")
 	start := time.Now()
 	files := fileutil.GetFiles(TEST_FILE_PATH)
 	elapsed := time.Since(start)
-	fmt.Printf("%d test files read %s\n\n", len(files), elapsed)
+	endLoading(ch)
 
 	if len(files) < 1 {
 		fmt.Println("Please create some test files first.")
 		return
 	}
+
+	fmt.Printf("%d test files read %s\n", len(files), elapsed)
 
 	err := api.DeleteAllFiles(serverURL)
 	if err != nil {
@@ -153,31 +167,16 @@ func uploadFilesCmd() {
 	}
 	fmt.Println("Deleted all files in the DB!")
 
-	fmt.Printf("Uploading %d files...\n", len(files))
+	ch = startLoading(fmt.Sprintf("Uploading %d files", len(files)))
 	start = time.Now()
 	err = api.SendFiles(serverURL, files)
+	endLoading(ch)
 	if err != nil {
 		fmt.Println("Error sending the files to the server:", err)
 		return
 	}
 	elapsed = time.Since(start)
 	fmt.Printf("Uploaded %d files! %s\n\n", len(files), elapsed)
-}
-
-func deleteTestFilesCmd() {
-	fmt.Println("Deleting all test files...")
-	start := time.Now()
-	deleteTestFiles()
-	elapsed := time.Since(start)
-	fmt.Printf("Test files deleted %s\n\n", elapsed)
-}
-
-func deleteDownloadsCmd() {
-	fmt.Println("Deleting all  downloads...")
-	start := time.Now()
-	deleteDownloads()
-	elapsed := time.Since(start)
-	fmt.Printf("Downloads deleted %s\n\n", elapsed)
 }
 
 func downloadAndVerifyFileCmd() {
@@ -195,24 +194,38 @@ func downloadAndVerifyFileCmd() {
 		return
 	}
 
-	file, err := api.GetFile(serverURL, input, DOWNLOAD_FILE_PATH)
+	fileName, fileData, err := api.GetFile(serverURL, input)
 	if err != nil {
 		fmt.Println("Error getting file with id:", input, ":", err)
 		return
 	}
+
+	filePath := "./" + DOWNLOAD_FILE_PATH + "/" + fileName
+	err = os.WriteFile(filePath, fileData, 0644)
+	if err != nil {
+		fmt.Println("Error getting file with id:", input, ":", err)
+		return
+	}
+
 	proof, err := api.GetProof(serverURL, input)
 	if err != nil {
 		fmt.Println("Error getting proof:", err)
 		return
 	}
 
-	fileHash := sha256.Sum256(file)
-	fmt.Printf("Downloaded file: %s\n", input)
+	fileHash := sha256.Sum256(fileData)
+	fmt.Printf("Downloaded file %s to: %s\n", input, filePath)
 
-	if merkletree.VerifyMerkleProof(root.Hash, fileHash[:], proof) {
-		fmt.Print("Merkle proof verification successful!\nFile integrity is confirmed.\n\n")
+	isVerified, proofRoot := merkletree.VerifyMerkleProof(root.Hash, fileHash[:], proof)
+	rootHash := hex.EncodeToString(root.Hash)
+	proofRootHash := hex.EncodeToString(proofRoot)
+	fmt.Println("New root generated with Merkle proof!")
+	fmt.Printf("Stored root hash: %s\n", rootHash)
+	fmt.Printf("Proof root hash:  %s\n", proofRootHash)
+	if isVerified {
+		fmt.Printf("The hashes match!\n%s has not been modified\n", filePath)
 	} else {
-		fmt.Print("Merkle proof verification failed!\nFile integrity cannot be confirmed.\n\n")
+		fmt.Printf("The hashes don't match!\n%s has been corrupted\n", filePath)
 	}
 }
 
@@ -237,7 +250,25 @@ func corruptFileCmd() {
 		fmt.Println("Error corrupting file in DB:", err)
 		return
 	}
-	fmt.Printf("Corrupted file: %s\n\n", input)
+	fmt.Printf("File %s has been modified on the server!\n\n", input)
+}
+
+func deleteTestFilesCmd() {
+	ch := startLoading("Deleting test files")
+	start := time.Now()
+	deleteTestFiles()
+	elapsed := time.Since(start)
+	endLoading(ch)
+	fmt.Printf("Test files deleted! %s\n\n", elapsed)
+}
+
+func deleteDownloadsCmd() {
+	start := time.Now()
+	ch := startLoading("Deleting downloads")
+	deleteDownloads()
+	elapsed := time.Since(start)
+	endLoading(ch)
+	fmt.Printf("Downloads deleted! %s\n\n", elapsed)
 }
 
 func exitCmd() {
@@ -275,4 +306,9 @@ func startLoading(text string) chan bool {
 	}()
 
 	return ch
+}
+
+func endLoading(ch chan bool) {
+	close(ch)
+	fmt.Print("\r\033[K")
 }

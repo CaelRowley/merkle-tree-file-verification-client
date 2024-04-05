@@ -116,7 +116,7 @@ func CreateMerkleProof(root *Node, hash []byte) (MerkleProof, error) {
 	return proof, nil
 }
 
-func VerifyMerkleProof(rootHash []byte, hash []byte, proof MerkleProof) bool {
+func VerifyMerkleProof(rootHash []byte, hash []byte, proof MerkleProof) (bool, []byte) {
 	currentHash := hash
 	for _, sibling := range proof {
 		if sibling.IsLeft {
@@ -126,7 +126,7 @@ func VerifyMerkleProof(rootHash []byte, hash []byte, proof MerkleProof) bool {
 		}
 	}
 
-	return bytes.Equal(currentHash, rootHash)
+	return bytes.Equal(currentHash, rootHash), currentHash
 }
 
 func newNode(hash []byte, left *Node, right *Node) *Node {
