@@ -16,7 +16,7 @@ import (
 )
 
 const TEST_FILE_PATH = "testfiles"
-const DOWNLOAD_PATH = "downloads"
+const DOWNLOAD_FILE_PATH = "downloads"
 
 var (
 	serverURL = os.Getenv("SERVER_URL")
@@ -25,28 +25,32 @@ var (
 var root *merkletree.Node
 
 func main() {
-	cleanFiles()
 	fileutil.MakeDir(TEST_FILE_PATH)
-	fileutil.MakeDir(DOWNLOAD_PATH)
+	fileutil.MakeDir(DOWNLOAD_FILE_PATH)
 	if serverURL == "" {
 		serverURL = "http://localhost:8080"
 	}
 
+	const CREATE_FILES_CMD = "Create files"
 	const UPLOAD_FILES_CMD = "Upload files"
+	const DELETE_FILES_CMD = "Delete files"
 	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and verify file"
 	const CORRUPT_FILE_CMD = "Corrupt a file"
 	const EXIT_CMD = "Exit"
 
 	commands := []string{
+		CREATE_FILES_CMD,
 		UPLOAD_FILES_CMD,
 		DOWNLOAD_AND_VERIFY_FILE_CMD,
 		CORRUPT_FILE_CMD,
+		DELETE_FILES_CMD,
 		EXIT_CMD,
 	}
 
 	prompt := promptui.Select{
 		Label: "Select a command",
 		Items: commands,
+		Size:  len(commands),
 	}
 
 	for {
@@ -58,8 +62,12 @@ func main() {
 		fmt.Println()
 
 		switch selected {
+		case CREATE_FILES_CMD:
+			createFilesCmd()
 		case UPLOAD_FILES_CMD:
 			uploadFilesCmd()
+		case DELETE_FILES_CMD:
+			deleteFilesCmd()
 		case DOWNLOAD_AND_VERIFY_FILE_CMD:
 			downloadAndVerifyFileCmd()
 		case CORRUPT_FILE_CMD:
@@ -72,12 +80,10 @@ func main() {
 	}
 }
 
-func uploadFilesCmd() {
-	fileutil.RemoveDir(TEST_FILE_PATH)
-	fileutil.MakeDir(TEST_FILE_PATH)
-	fmt.Println("Deleted all local files!")
+func createFilesCmd() {
+	deleteFilesCmd()
 	prompt := promptui.Prompt{
-		Label: "Amount to upload",
+		Label: "Amount to create",
 	}
 	input, err := prompt.Run()
 	if err != nil {
@@ -91,41 +97,62 @@ func uploadFilesCmd() {
 		return
 	}
 
+	fmt.Printf("Creating %d test files...\n", amount)
 	start := time.Now()
 	fileutil.WriteDummyFiles(TEST_FILE_PATH, amount)
 	elapsed := time.Since(start)
-	fmt.Printf("WriteDummyFiles took %s\n", elapsed)
+	fmt.Printf("%d test files created %s\n\n", amount, elapsed)
+}
 
+func uploadFilesCmd() {
+	err := api.DeleteAllFiles(serverURL)
+	if err != nil {
+		fmt.Println("Error deleting files in the DB:", err)
+		return
+	}
+	fmt.Println("Deleted all files in the DB!")
+
+	fmt.Printf("Reading test files...\n")
+	start := time.Now()
 	files := fileutil.GetFiles(TEST_FILE_PATH)
+	elapsed := time.Since(start)
+	fmt.Printf("%d test files read %s\n\n", len(files), elapsed)
+
+	if len(files) < 1 {
+		fmt.Println("Please create some test files first.")
+		return
+	}
+
+	fmt.Printf("Building Merkle tree...\n")
+	start = time.Now()
 	var fileHashes [][]byte
 	for _, file := range files {
 		fileHash := sha256.Sum256([]byte(file.Data))
 		fileHashes = append(fileHashes, fileHash[:])
 	}
-	fmt.Printf("Created %d files!\n", amount)
-
 	root = merkletree.BuildTree(fileHashes)
 	rootHash := hex.EncodeToString(root.Hash[:])
-	fmt.Printf("Generated merkle tree with root hash: %s\n", rootHash)
+	elapsed = time.Since(start)
+	fmt.Printf("Generated merkle tree with root hash: %s %s\n", rootHash, elapsed)
 
-	err = api.DeleteAllFiles(serverURL)
-	if err != nil {
-		fmt.Println("Error deleting files in the DB:", err)
-		return
-	}
-
-	fmt.Println("Deleted all files in the DB!")
-
+	fmt.Printf("Uploading %d files...\n", len(files))
+	start = time.Now()
 	err = api.SendFiles(serverURL, files)
 	if err != nil {
 		fmt.Println("Error sending the files to the server:", err)
 		return
 	}
-	fmt.Printf("Uploaded %d files!\n", amount)
+	elapsed = time.Since(start)
+	fmt.Printf("Uploaded %d files! %s\n\n", len(files), elapsed)
+}
 
-	go fileutil.RemoveDir(TEST_FILE_PATH)
+func deleteFilesCmd() {
+	fmt.Println("Deleting all test files...")
+	start := time.Now()
+	fileutil.RemoveDir(TEST_FILE_PATH)
 	fileutil.MakeDir(TEST_FILE_PATH)
-	fmt.Println("Deleted all local files!")
+	elapsed := time.Since(start)
+	fmt.Printf("Test files deleted %s\n\n", elapsed)
 }
 
 func downloadAndVerifyFileCmd() {
@@ -143,7 +170,7 @@ func downloadAndVerifyFileCmd() {
 		return
 	}
 
-	file, err := api.GetFile(serverURL, input, DOWNLOAD_PATH)
+	file, err := api.GetFile(serverURL, input, DOWNLOAD_FILE_PATH)
 	if err != nil {
 		fmt.Println("Error getting file with id:", input, ":", err)
 		return
@@ -158,9 +185,9 @@ func downloadAndVerifyFileCmd() {
 	fmt.Printf("Downloaded file: %s\n", input)
 
 	if merkletree.VerifyMerkleProof(root.Hash, fileHash[:], proof) {
-		fmt.Println("Merkle proof verification successful!\nFile integrity is confirmed.")
+		fmt.Print("Merkle proof verification successful!\nFile integrity is confirmed.\n\n")
 	} else {
-		fmt.Println("Merkle proof verification failed!\nFile integrity cannot be confirmed.")
+		fmt.Print("Merkle proof verification failed!\nFile integrity cannot be confirmed.\n\n")
 	}
 }
 
@@ -185,16 +212,10 @@ func corruptFileCmd() {
 		fmt.Println("Error corrupting file in DB:", err)
 		return
 	}
-	fmt.Printf("Corrupted file: %s\n", input)
+	fmt.Printf("Corrupted file: %s\n\n", input)
 }
 
 func exitCmd() {
-	cleanFiles()
 	fmt.Println("Goodbye!")
 	os.Exit(0)
-}
-
-func cleanFiles() {
-	fileutil.RemoveDir(TEST_FILE_PATH)
-	fileutil.RemoveDir(DOWNLOAD_PATH)
 }

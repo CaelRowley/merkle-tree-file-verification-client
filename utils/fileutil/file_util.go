@@ -15,7 +15,7 @@ type File struct {
 
 func MakeDir(path string) {
 	err := os.Mkdir(path, 0755)
-	if err != nil {
+	if err != nil && !os.IsExist(err) {
 		fmt.Println(err)
 	}
 }
