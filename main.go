@@ -194,6 +194,7 @@ func downloadAndVerifyFileCmd() {
 		return
 	}
 
+	start := time.Now()
 	fileName, fileData, err := api.GetFile(serverURL, input)
 	if err != nil {
 		fmt.Println("Error getting file with id:", input, ":", err)
@@ -214,12 +215,15 @@ func downloadAndVerifyFileCmd() {
 	}
 
 	fileHash := sha256.Sum256(fileData)
-	fmt.Printf("Downloaded file %s to: %s\n", input, filePath)
+	elapsed := time.Since(start)
+	fmt.Printf("Downloaded file %s to: %s %s\n", input, filePath, elapsed)
 
+	start = time.Now()
 	isVerified, proofRoot := merkletree.VerifyMerkleProof(root.Hash, fileHash[:], proof)
 	rootHash := hex.EncodeToString(root.Hash)
 	proofRootHash := hex.EncodeToString(proofRoot)
-	fmt.Println("New root generated with Merkle proof!")
+	elapsed = time.Since(start)
+	fmt.Println("New root generated with Merkle proof!", elapsed)
 	fmt.Printf("Stored root hash: %s\n", rootHash)
 	fmt.Printf("Proof root hash:  %s\n", proofRootHash)
 	if isVerified {
@@ -239,6 +243,7 @@ func corruptFileCmd() {
 		return
 	}
 
+	start := time.Now()
 	file, err := fileutil.GetFile("corrupt.txt")
 	if err != nil {
 		fmt.Println("Error getting corrupt file:", err)
@@ -250,7 +255,8 @@ func corruptFileCmd() {
 		fmt.Println("Error corrupting file in DB:", err)
 		return
 	}
-	fmt.Printf("File %s has been modified on the server!\n\n", input)
+	elapsed := time.Since(start)
+	fmt.Printf("File %s has been modified on the server! %s\n\n", input, elapsed)
 }
 
 func deleteTestFilesCmd() {
