@@ -31,19 +31,23 @@ func main() {
 		serverURL = "http://localhost:8080"
 	}
 
-	const CREATE_FILES_CMD = "Create files"
-	const UPLOAD_FILES_CMD = "Upload files"
-	const DELETE_FILES_CMD = "Delete files"
-	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and verify file"
-	const CORRUPT_FILE_CMD = "Corrupt a file"
+	const CREATE_FILES_CMD = "Create Test Files"
+	const CREATE_TREE_COMMAND = "Generate Merkle Tree"
+	const UPLOAD_FILES_CMD = "Upload Test Files"
+	const DELETE_TEST_FILES_CMD = "Delete Test Files"
+	const DELETE_DOWNLOADS_CMD = "Delete Downloads"
+	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and Verify File"
+	const CORRUPT_FILE_CMD = "Corrupt a File on Server"
 	const EXIT_CMD = "Exit"
 
 	commands := []string{
 		CREATE_FILES_CMD,
+		CREATE_TREE_COMMAND,
 		UPLOAD_FILES_CMD,
 		DOWNLOAD_AND_VERIFY_FILE_CMD,
 		CORRUPT_FILE_CMD,
-		DELETE_FILES_CMD,
+		DELETE_TEST_FILES_CMD,
+		DELETE_DOWNLOADS_CMD,
 		EXIT_CMD,
 	}
 
@@ -64,10 +68,14 @@ func main() {
 		switch selected {
 		case CREATE_FILES_CMD:
 			createFilesCmd()
+		case CREATE_TREE_COMMAND:
+			createTreeCmd()
 		case UPLOAD_FILES_CMD:
 			uploadFilesCmd()
-		case DELETE_FILES_CMD:
-			deleteFilesCmd()
+		case DELETE_TEST_FILES_CMD:
+			deleteTestFilesCmd()
+		case DELETE_DOWNLOADS_CMD:
+			deleteDownloadsCmd()
 		case DOWNLOAD_AND_VERIFY_FILE_CMD:
 			downloadAndVerifyFileCmd()
 		case CORRUPT_FILE_CMD:
@@ -81,7 +89,7 @@ func main() {
 }
 
 func createFilesCmd() {
-	deleteFilesCmd()
+	deleteTestFiles()
 	prompt := promptui.Prompt{
 		Label: "Amount to create",
 	}
@@ -104,14 +112,28 @@ func createFilesCmd() {
 	fmt.Printf("%d test files created %s\n\n", amount, elapsed)
 }
 
-func uploadFilesCmd() {
-	err := api.DeleteAllFiles(serverURL)
-	if err != nil {
-		fmt.Println("Error deleting files in the DB:", err)
+func createTreeCmd() {
+	files := fileutil.GetFiles(TEST_FILE_PATH)
+	if len(files) < 1 {
+		fmt.Println("Please create some test files first.")
 		return
 	}
-	fmt.Println("Deleted all files in the DB!")
 
+	var fileHashes [][]byte
+	for _, file := range files {
+		fileHash := sha256.Sum256([]byte(file.Data))
+		fileHashes = append(fileHashes, fileHash[:])
+	}
+
+	fmt.Printf("Building Merkle tree...\n")
+	start := time.Now()
+	root = merkletree.BuildTree(fileHashes)
+	rootHash := hex.EncodeToString(root.Hash[:])
+	elapsed := time.Since(start)
+	fmt.Printf("Generated Merkle tree with root hash: %s %s\n", rootHash, elapsed)
+}
+
+func uploadFilesCmd() {
 	fmt.Printf("Reading test files...\n")
 	start := time.Now()
 	files := fileutil.GetFiles(TEST_FILE_PATH)
@@ -123,17 +145,12 @@ func uploadFilesCmd() {
 		return
 	}
 
-	fmt.Printf("Building Merkle tree...\n")
-	start = time.Now()
-	var fileHashes [][]byte
-	for _, file := range files {
-		fileHash := sha256.Sum256([]byte(file.Data))
-		fileHashes = append(fileHashes, fileHash[:])
+	err := api.DeleteAllFiles(serverURL)
+	if err != nil {
+		fmt.Println("Error deleting files in the DB:", err)
+		return
 	}
-	root = merkletree.BuildTree(fileHashes)
-	rootHash := hex.EncodeToString(root.Hash[:])
-	elapsed = time.Since(start)
-	fmt.Printf("Generated merkle tree with root hash: %s %s\n", rootHash, elapsed)
+	fmt.Println("Deleted all files in the DB!")
 
 	fmt.Printf("Uploading %d files...\n", len(files))
 	start = time.Now()
@@ -146,18 +163,25 @@ func uploadFilesCmd() {
 	fmt.Printf("Uploaded %d files! %s\n\n", len(files), elapsed)
 }
 
-func deleteFilesCmd() {
+func deleteTestFilesCmd() {
 	fmt.Println("Deleting all test files...")
 	start := time.Now()
-	fileutil.RemoveDir(TEST_FILE_PATH)
-	fileutil.MakeDir(TEST_FILE_PATH)
+	deleteTestFiles()
 	elapsed := time.Since(start)
 	fmt.Printf("Test files deleted %s\n\n", elapsed)
 }
 
+func deleteDownloadsCmd() {
+	fmt.Println("Deleting all  downloads...")
+	start := time.Now()
+	deleteDownloads()
+	elapsed := time.Since(start)
+	fmt.Printf("Downloads deleted %s\n\n", elapsed)
+}
+
 func downloadAndVerifyFileCmd() {
 	if root == nil {
-		fmt.Println("You need to upload files first")
+		fmt.Println("You need to Generate a Merkle tree first.")
 		return
 	}
 
@@ -218,4 +242,14 @@ func corruptFileCmd() {
 func exitCmd() {
 	fmt.Println("Goodbye!")
 	os.Exit(0)
+}
+
+func deleteTestFiles() {
+	fileutil.RemoveDir(TEST_FILE_PATH)
+	fileutil.MakeDir(TEST_FILE_PATH)
+}
+
+func deleteDownloads() {
+	fileutil.RemoveDir(DOWNLOAD_FILE_PATH)
+	fileutil.MakeDir(DOWNLOAD_FILE_PATH)
 }
