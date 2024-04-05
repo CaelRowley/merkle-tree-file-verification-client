@@ -8,8 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var Trees []MerkleTree
-
 type MerkleTree struct {
 	ID   uuid.UUID
 	Root *Node
@@ -57,19 +55,6 @@ func BuildTree(hashes [][]byte) *Node {
 	}
 
 	return currentLevel[0]
-}
-
-func AddTree(tree MerkleTree) {
-	Trees = append(Trees, tree)
-}
-
-func GetTree(treeID uuid.UUID) *MerkleTree {
-	for _, tree := range Trees {
-		if tree.ID == treeID {
-			return &tree
-		}
-	}
-	return nil
 }
 
 func CreateMerkleProof(root *Node, hash []byte) (MerkleProof, error) {
