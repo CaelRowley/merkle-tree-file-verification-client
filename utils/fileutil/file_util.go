@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"sync"
 )
 
 type File struct {
@@ -24,14 +25,28 @@ func RemoveDir(path string) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 }
 
 func WriteDummyFiles(path string, amount int) {
+	maxGoroutines := 8
+	sem := make(chan struct{}, maxGoroutines)
+
+	var wg sync.WaitGroup
+
+	wg.Add(amount)
 	for i := 0; i < amount; i++ {
-		fileName := fmt.Sprintf("%d.txt", i)
-		fileContent := fmt.Sprintf("Hello %d", i)
-		WriteFile(path, fileName, fileContent)
+		sem <- struct{}{}
+		go func(i int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			fileName := fmt.Sprintf("%d.txt", i)
+			fileContent := fmt.Sprintf("Hello %d", i)
+			WriteFile(path, fileName, fileContent)
+		}(i)
 	}
+
+	wg.Wait()
 }
 
 func WriteFile(path string, name string, content string) {

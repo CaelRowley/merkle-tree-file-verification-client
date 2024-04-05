@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/manifoldco/promptui"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/api"
@@ -14,7 +15,7 @@ import (
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/merkletree"
 )
 
-const FILE_PATH = "testfiles"
+const TEST_FILE_PATH = "testfiles"
 const DOWNLOAD_PATH = "downloads"
 
 var (
@@ -25,7 +26,7 @@ var root *merkletree.Node
 
 func main() {
 	cleanFiles()
-	fileutil.MakeDir(FILE_PATH)
+	fileutil.MakeDir(TEST_FILE_PATH)
 	fileutil.MakeDir(DOWNLOAD_PATH)
 	if serverURL == "" {
 		serverURL = "http://localhost:8080"
@@ -72,6 +73,9 @@ func main() {
 }
 
 func uploadFilesCmd() {
+	fileutil.RemoveDir(TEST_FILE_PATH)
+	fileutil.MakeDir(TEST_FILE_PATH)
+	fmt.Println("Deleted all local files!")
 	prompt := promptui.Prompt{
 		Label: "Amount to upload",
 	}
@@ -87,8 +91,12 @@ func uploadFilesCmd() {
 		return
 	}
 
-	fileutil.WriteDummyFiles(FILE_PATH, amount)
-	files := fileutil.GetFiles(FILE_PATH)
+	start := time.Now()
+	fileutil.WriteDummyFiles(TEST_FILE_PATH, amount)
+	elapsed := time.Since(start)
+	fmt.Printf("WriteDummyFiles took %s\n", elapsed)
+
+	files := fileutil.GetFiles(TEST_FILE_PATH)
 	var fileHashes [][]byte
 	for _, file := range files {
 		fileHash := sha256.Sum256([]byte(file.Data))
@@ -115,9 +123,8 @@ func uploadFilesCmd() {
 	}
 	fmt.Printf("Uploaded %d files!\n", amount)
 
-	fileutil.RemoveDir(FILE_PATH)
-	fileutil.MakeDir(FILE_PATH)
-
+	go fileutil.RemoveDir(TEST_FILE_PATH)
+	fileutil.MakeDir(TEST_FILE_PATH)
 	fmt.Println("Deleted all local files!")
 }
 
@@ -188,6 +195,6 @@ func exitCmd() {
 }
 
 func cleanFiles() {
-	fileutil.RemoveDir(FILE_PATH)
+	fileutil.RemoveDir(TEST_FILE_PATH)
 	fileutil.RemoveDir(DOWNLOAD_PATH)
 }
