@@ -105,10 +105,11 @@ func createFilesCmd() {
 		return
 	}
 
-	fmt.Printf("Creating %d test files...\n", amount)
+	ch := startLoading(fmt.Sprintf("Creating %d test files", amount))
 	start := time.Now()
 	fileutil.WriteDummyFiles(TEST_FILE_PATH, amount)
 	elapsed := time.Since(start)
+	close(ch)
 	fmt.Printf("%d test files created %s\n\n", amount, elapsed)
 }
 
@@ -252,4 +253,26 @@ func deleteTestFiles() {
 func deleteDownloads() {
 	fileutil.RemoveDir(DOWNLOAD_FILE_PATH)
 	fileutil.MakeDir(DOWNLOAD_FILE_PATH)
+}
+
+func startLoading(text string) chan bool {
+	ch := make(chan bool)
+	dots := []string{text + "   ", text + ".  ", text + ".. ", text + "..."}
+
+	go func() {
+		for {
+			for _, dot := range dots {
+				select {
+				case <-ch:
+					fmt.Print("\r\033[K")
+					return
+				default:
+					fmt.Printf("\r%s", dot)
+					time.Sleep(200 * time.Millisecond)
+				}
+			}
+		}
+	}()
+
+	return ch
 }
