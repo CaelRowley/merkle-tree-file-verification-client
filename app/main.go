@@ -19,7 +19,7 @@ func main() {
 	const CREATE_FILES_CMD = "Create Test Files"
 	const CREATE_TREE_COMMAND = "Generate Merkle Tree"
 	const UPLOAD_FILES_CMD = "Upload Test Files"
-	const DELETE_TEST_FILES_CMD = "Delete Test Files"
+	const DELETE_TEST_FILES_CMD = "Delete Local Test Files"
 	const DELETE_DOWNLOADS_CMD = "Delete Downloads"
 	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and Verify File"
 	const CORRUPT_FILE_CMD = "Corrupt a File on Server"

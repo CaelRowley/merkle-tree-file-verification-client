@@ -110,6 +110,7 @@ func UploadFilesCmd(serverURL string) {
 	}
 	elapsed = time.Since(start)
 	fmt.Printf("Uploaded %d files! %s\n", len(files), elapsed)
+	fmt.Printf("IDs range from 1 to %d\n", len(files))
 }
 
 func DownloadAndVerifyFileCmd(serverURL string) {
@@ -124,6 +125,11 @@ func DownloadAndVerifyFileCmd(serverURL string) {
 	input, err := prompt.Run()
 	if err != nil {
 		fmt.Println("Error with prompt:", err)
+		return
+	}
+	_, err = strconv.Atoi(input)
+	if err != nil {
+		fmt.Println("Please enter an integer:", err)
 		return
 	}
 
@@ -174,6 +180,11 @@ func CorruptFileCmd(serverURL string) {
 	input, err := prompt.Run()
 	if err != nil {
 		fmt.Println("Error with prompt:", err)
+		return
+	}
+	_, err = strconv.Atoi(input)
+	if err != nil {
+		fmt.Println("Please enter an integer:", err)
 		return
 	}
 
