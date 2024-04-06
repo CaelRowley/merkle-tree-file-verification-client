@@ -1,0 +1,9 @@
+services:
+  client:
+    restart: always
+    build:
+      dockerfile: Dockerfile
+    environment:
+      SERVER_URL: http://localhost:8080
+    network_mode: "host"
+    

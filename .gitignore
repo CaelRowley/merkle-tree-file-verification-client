@@ -13,6 +13,9 @@
 
 !corrupt.txt
 
+!Dockerfile
+!docker-compose.yml
+
 # !Makefile
 
 # ...even if they are in subdirectories
