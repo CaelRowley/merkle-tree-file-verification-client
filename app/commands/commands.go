@@ -21,10 +21,6 @@ const (
 )
 
 func CreateFilesCmd() {
-	chLoading := startLoading("Deleting previous test files")
-	deleteFilesInDir(TEST_FILE_PATH)
-	endLoading(chLoading)
-
 	prompt := promptui.Prompt{
 		Label: "Amount to create",
 	}
@@ -38,6 +34,10 @@ func CreateFilesCmd() {
 		fmt.Println("Please enter an integer:", err)
 		return
 	}
+
+	chLoading := startLoading("Deleting previous test files")
+	deleteFilesInDir(TEST_FILE_PATH)
+	endLoading(chLoading)
 
 	chLoading = startLoading(fmt.Sprintf("Creating %d test files", amount))
 	start := time.Now()

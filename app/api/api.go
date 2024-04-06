@@ -9,25 +9,41 @@ import (
 	"mime"
 	"net/http"
 
+	"github.com/google/uuid"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/fileutil"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/merkletree"
 )
 
 func UploadFiles(url string, files []fileutil.File) error {
-	requestUrl := url + "/files/upload"
-	jsonData, err := json.Marshal(files)
+	batchSize := 10000
+
+	batchId, err := uuid.NewV7()
 	if err != nil {
 		return err
 	}
 
-	res, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
+	requestUrl := fmt.Sprintf("%s/files/upload-batch/%s", url, batchId)
 
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("server responded with non-OK status: %d", res.StatusCode)
+	for i := 0; i < len(files); i += batchSize {
+		end := i + batchSize
+		if end > len(files) {
+			end = len(files)
+		}
+
+		batch := files[i:end]
+		jsonData, err := json.Marshal(batch)
+		if err != nil {
+			return err
+		}
+		res, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			return fmt.Errorf("server responded with non-OK status: %d", res.StatusCode)
+		}
 	}
 
 	return nil
