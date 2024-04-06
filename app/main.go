@@ -48,8 +48,6 @@ func main() {
 			log.Fatal(err)
 		}
 
-		fmt.Println()
-
 		switch selected {
 		case CREATE_FILES_CMD:
 			commands.CreateFilesCmd()
@@ -69,6 +67,7 @@ func main() {
 			commands.ExitCmd()
 		}
 
+		fmt.Println()
 		fmt.Println()
 	}
 }

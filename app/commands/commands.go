@@ -46,7 +46,7 @@ func CreateFilesCmd() {
 	endLoading(chLoading)
 
 	cwd, _ := os.Getwd()
-	fmt.Printf("%d test files created in:\n%s%s %s\n\n", amount, cwd, TEST_FILE_PATH, elapsed)
+	fmt.Printf("%d test files created in:\n%s/%s %s\n", amount, cwd, TEST_FILE_PATH, elapsed)
 }
 
 func CreateTreeCmd() {
@@ -109,7 +109,7 @@ func UploadFilesCmd(serverURL string) {
 		return
 	}
 	elapsed = time.Since(start)
-	fmt.Printf("Uploaded %d files! %s\n\n", len(files), elapsed)
+	fmt.Printf("Uploaded %d files! %s\n", len(files), elapsed)
 }
 
 func DownloadAndVerifyFileCmd(serverURL string) {
@@ -150,7 +150,7 @@ func DownloadAndVerifyFileCmd(serverURL string) {
 	fileHash := sha256.Sum256(fileData)
 	elapsed := time.Since(start)
 	cwd, _ := os.Getwd()
-	fmt.Printf("Downloaded file %s to:\n%s%s %s\n", input, cwd, filePath, elapsed)
+	fmt.Printf("Downloaded file %s to:\n%s/%s %s\n", input, cwd, filePath, elapsed)
 
 	start = time.Now()
 	isVerified, proofRoot := merkletree.VerifyMerkleProof(merkletree.Root.Hash, fileHash[:], proof)
@@ -190,7 +190,7 @@ func CorruptFileCmd(serverURL string) {
 		return
 	}
 	elapsed := time.Since(start)
-	fmt.Printf("File %s has been modified on the server! %s\n\n", input, elapsed)
+	fmt.Printf("File %s has been modified on the server! %s\n", input, elapsed)
 }
 
 func DeleteTestFilesCmd() {
@@ -199,7 +199,7 @@ func DeleteTestFilesCmd() {
 	deleteFilesInDir(TEST_FILE_PATH)
 	elapsed := time.Since(start)
 	endLoading(ch)
-	fmt.Printf("Test files deleted! %s\n\n", elapsed)
+	fmt.Printf("Test files deleted! %s\n", elapsed)
 }
 
 func DeleteDownloadsCmd() {
@@ -208,7 +208,7 @@ func DeleteDownloadsCmd() {
 	deleteFilesInDir(DOWNLOAD_FILE_PATH)
 	elapsed := time.Since(start)
 	endLoading(ch)
-	fmt.Printf("Downloads deleted! %s\n\n", elapsed)
+	fmt.Printf("Downloads deleted! %s\n", elapsed)
 }
 
 func ExitCmd() {
