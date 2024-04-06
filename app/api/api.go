@@ -9,25 +9,25 @@ import (
 	"mime"
 	"net/http"
 
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/fileutil"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/merkletree"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/fileutil"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/merkletree"
 )
 
-func SendFiles(url string, files []fileutil.File) error {
+func UploadFiles(url string, files []fileutil.File) error {
 	requestUrl := url + "/files/upload"
 	jsonData, err := json.Marshal(files)
 	if err != nil {
 		return err
 	}
 
-	resp, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
+	res, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server responded with non-OK status: %d", resp.StatusCode)
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("server responded with non-OK status: %d", res.StatusCode)
 	}
 
 	return nil
@@ -35,13 +35,13 @@ func SendFiles(url string, files []fileutil.File) error {
 
 func GetProof(url string, id string) (merkletree.MerkleProof, error) {
 	requestUrl := fmt.Sprintf("%s/files/get-proof/%s", url, id)
-	response, err := http.Get(requestUrl)
+	res, err := http.Get(requestUrl)
 	if err != nil {
 		return nil, err
 	}
-	defer response.Body.Close()
+	defer res.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -57,23 +57,26 @@ func GetProof(url string, id string) (merkletree.MerkleProof, error) {
 
 func GetFile(url string, id string) (string, []byte, error) {
 	requestUrl := fmt.Sprintf("%s/files/download/%s", url, id)
-
-	response, err := http.Get(requestUrl)
+	res, err := http.Get(requestUrl)
 	if err != nil {
 		return "", nil, err
 	}
-	defer response.Body.Close()
+	defer res.Body.Close()
 
-	if response.StatusCode == http.StatusNotFound {
+	if res.StatusCode == http.StatusNotFound {
 		return "", nil, errors.New("No file found for id: " + id)
 	}
 
-	body, err := io.ReadAll(response.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return "", nil, err
 	}
 
-	_, params, err := mime.ParseMediaType(response.Header["Content-Disposition"][0])
+	if len(res.Header["Content-Disposition"]) == 0 {
+		return "", nil, errors.New("filename missing from header")
+	}
+
+	_, params, err := mime.ParseMediaType(res.Header["Content-Disposition"][0])
 	if err != nil {
 		return "", nil, err
 	}
@@ -84,11 +87,11 @@ func GetFile(url string, id string) (string, []byte, error) {
 
 func DeleteAllFiles(url string) error {
 	requestUrl := url + "/files/delete-all"
-	response, err := http.Post(requestUrl, "application/json", nil)
+	res, err := http.Post(requestUrl, "application/json", nil)
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer res.Body.Close()
 
 	return nil
 }
@@ -100,14 +103,14 @@ func CorruptFile(url string, id string, file []byte) error {
 		return err
 	}
 
-	resp, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
+	res, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("server responded with non-OK status: %d", resp.StatusCode)
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("server responded with non-OK status: %d", res.StatusCode)
 	}
 
 	return nil

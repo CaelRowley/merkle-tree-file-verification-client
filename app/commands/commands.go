@@ -1,97 +1,29 @@
-package main
+package commands
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/manifoldco/promptui"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/api"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/fileutil"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/utils/merkletree"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/api"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/fileutil"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/merkletree"
 )
 
-const TEST_FILE_PATH = "testfiles"
-const DOWNLOAD_FILE_PATH = "downloads"
-
-var (
-	serverURL = os.Getenv("SERVER_URL")
+const (
+	TEST_FILE_PATH     = "files/test"
+	DOWNLOAD_FILE_PATH = "files/downloads"
+	CORRUPT_FILE_PATH  = "files/corrupt.txt"
 )
 
-var root *merkletree.Node
-
-func main() {
-	fileutil.MakeDir(TEST_FILE_PATH)
-	fileutil.MakeDir(DOWNLOAD_FILE_PATH)
-	if serverURL == "" {
-		serverURL = "http://localhost:8080"
-	}
-
-	const CREATE_FILES_CMD = "Create Test Files"
-	const CREATE_TREE_COMMAND = "Generate Merkle Tree"
-	const UPLOAD_FILES_CMD = "Upload Test Files"
-	const DELETE_TEST_FILES_CMD = "Delete Test Files"
-	const DELETE_DOWNLOADS_CMD = "Delete Downloads"
-	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and Verify File"
-	const CORRUPT_FILE_CMD = "Corrupt a File on Server"
-	const EXIT_CMD = "Exit"
-
-	commands := []string{
-		CREATE_FILES_CMD,
-		CREATE_TREE_COMMAND,
-		UPLOAD_FILES_CMD,
-		DOWNLOAD_AND_VERIFY_FILE_CMD,
-		CORRUPT_FILE_CMD,
-		DELETE_TEST_FILES_CMD,
-		DELETE_DOWNLOADS_CMD,
-		EXIT_CMD,
-	}
-
-	prompt := promptui.Select{
-		Label: "Select a command",
-		Items: commands,
-		Size:  len(commands),
-	}
-
-	for {
-		_, selected, err := prompt.Run()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Println()
-
-		switch selected {
-		case CREATE_FILES_CMD:
-			createFilesCmd()
-		case CREATE_TREE_COMMAND:
-			createTreeCmd()
-		case UPLOAD_FILES_CMD:
-			uploadFilesCmd()
-		case DELETE_TEST_FILES_CMD:
-			deleteTestFilesCmd()
-		case DELETE_DOWNLOADS_CMD:
-			deleteDownloadsCmd()
-		case DOWNLOAD_AND_VERIFY_FILE_CMD:
-			downloadAndVerifyFileCmd()
-		case CORRUPT_FILE_CMD:
-			corruptFileCmd()
-		case EXIT_CMD:
-			exitCmd()
-		}
-
-		fmt.Println()
-	}
-}
-
-func createFilesCmd() {
-	chDeletingFiles := startLoading("Deleting previous test files")
-	deleteTestFiles()
-	endLoading(chDeletingFiles)
+func CreateFilesCmd() {
+	chLoading := startLoading("Deleting previous test files")
+	deleteFilesInDir(TEST_FILE_PATH)
+	endLoading(chLoading)
 
 	prompt := promptui.Prompt{
 		Label: "Amount to create",
@@ -101,27 +33,27 @@ func createFilesCmd() {
 		fmt.Println("Error with prompt:", err)
 		return
 	}
-
 	amount, err := strconv.Atoi(input)
 	if err != nil {
 		fmt.Println("Please enter an integer:", err)
 		return
 	}
 
-	ch := startLoading(fmt.Sprintf("Creating %d test files", amount))
+	chLoading = startLoading(fmt.Sprintf("Creating %d test files", amount))
 	start := time.Now()
 	fileutil.WriteDummyFiles(TEST_FILE_PATH, amount)
 	elapsed := time.Since(start)
-	endLoading(ch)
+	endLoading(chLoading)
+
 	fmt.Printf("%d test files created %s\n\n", amount, elapsed)
 }
 
-func createTreeCmd() {
+func CreateTreeCmd() {
 	start := time.Now()
-	ch := startLoading("Reading files and hashing data")
+	chLoading := startLoading("Reading files and hashing data")
 	files := fileutil.GetFiles(TEST_FILE_PATH)
 	if len(files) < 1 {
-		endLoading(ch)
+		endLoading(chLoading)
 		fmt.Println("Please create some test files first.")
 		return
 	}
@@ -132,26 +64,26 @@ func createTreeCmd() {
 		fileHashes = append(fileHashes, fileHash[:])
 	}
 	elapsed := time.Since(start)
-	endLoading(ch)
+	endLoading(chLoading)
 	fmt.Printf("Files hashed %s\n", elapsed)
 
-	ch = startLoading("Building tree")
+	chLoading = startLoading("Building tree")
 	start = time.Now()
-	root = merkletree.BuildTree(fileHashes)
-	rootHash := hex.EncodeToString(root.Hash[:])
+	merkletree.BuildTree(fileHashes)
+	rootHash := hex.EncodeToString(merkletree.Root.Hash[:])
 	elapsed = time.Since(start)
-	endLoading(ch)
+	endLoading(chLoading)
 
 	fmt.Printf("Generated Merkle tree %s\n", elapsed)
 	fmt.Printf("Root hash: %s\n", rootHash)
 }
 
-func uploadFilesCmd() {
-	ch := startLoading("Reading test files")
+func UploadFilesCmd(serverURL string) {
+	chLoading := startLoading("Reading test files")
 	start := time.Now()
 	files := fileutil.GetFiles(TEST_FILE_PATH)
 	elapsed := time.Since(start)
-	endLoading(ch)
+	endLoading(chLoading)
 
 	if len(files) < 1 {
 		fmt.Println("Please create some test files first.")
@@ -167,10 +99,10 @@ func uploadFilesCmd() {
 	}
 	fmt.Println("Deleted all files in the DB!")
 
-	ch = startLoading(fmt.Sprintf("Uploading %d files", len(files)))
+	chLoading = startLoading(fmt.Sprintf("Uploading %d files", len(files)))
 	start = time.Now()
-	err = api.SendFiles(serverURL, files)
-	endLoading(ch)
+	err = api.UploadFiles(serverURL, files)
+	endLoading(chLoading)
 	if err != nil {
 		fmt.Println("Error sending the files to the server:", err)
 		return
@@ -179,8 +111,8 @@ func uploadFilesCmd() {
 	fmt.Printf("Uploaded %d files! %s\n\n", len(files), elapsed)
 }
 
-func downloadAndVerifyFileCmd() {
-	if root == nil {
+func DownloadAndVerifyFileCmd(serverURL string) {
+	if merkletree.Root == nil {
 		fmt.Println("You need to Generate a Merkle tree first.")
 		return
 	}
@@ -201,7 +133,7 @@ func downloadAndVerifyFileCmd() {
 		return
 	}
 
-	filePath := "./" + DOWNLOAD_FILE_PATH + "/" + fileName
+	filePath := DOWNLOAD_FILE_PATH + "/" + fileName
 	err = os.WriteFile(filePath, fileData, 0644)
 	if err != nil {
 		fmt.Println("Error getting file with id:", input, ":", err)
@@ -219,8 +151,8 @@ func downloadAndVerifyFileCmd() {
 	fmt.Printf("Downloaded file %s to: %s %s\n", input, filePath, elapsed)
 
 	start = time.Now()
-	isVerified, proofRoot := merkletree.VerifyMerkleProof(root.Hash, fileHash[:], proof)
-	rootHash := hex.EncodeToString(root.Hash)
+	isVerified, proofRoot := merkletree.VerifyMerkleProof(merkletree.Root.Hash, fileHash[:], proof)
+	rootHash := hex.EncodeToString(merkletree.Root.Hash)
 	proofRootHash := hex.EncodeToString(proofRoot)
 	elapsed = time.Since(start)
 	fmt.Println("New root generated with Merkle proof!", elapsed)
@@ -233,7 +165,7 @@ func downloadAndVerifyFileCmd() {
 	}
 }
 
-func corruptFileCmd() {
+func CorruptFileCmd(serverURL string) {
 	prompt := promptui.Prompt{
 		Label: "Enter file id",
 	}
@@ -244,7 +176,7 @@ func corruptFileCmd() {
 	}
 
 	start := time.Now()
-	file, err := fileutil.GetFile("corrupt.txt")
+	file, err := fileutil.GetFile(CORRUPT_FILE_PATH)
 	if err != nil {
 		fmt.Println("Error getting corrupt file:", err)
 		return
@@ -259,37 +191,32 @@ func corruptFileCmd() {
 	fmt.Printf("File %s has been modified on the server! %s\n\n", input, elapsed)
 }
 
-func deleteTestFilesCmd() {
+func DeleteTestFilesCmd() {
 	ch := startLoading("Deleting test files")
 	start := time.Now()
-	deleteTestFiles()
+	deleteFilesInDir(TEST_FILE_PATH)
 	elapsed := time.Since(start)
 	endLoading(ch)
 	fmt.Printf("Test files deleted! %s\n\n", elapsed)
 }
 
-func deleteDownloadsCmd() {
+func DeleteDownloadsCmd() {
 	start := time.Now()
 	ch := startLoading("Deleting downloads")
-	deleteDownloads()
+	deleteFilesInDir(DOWNLOAD_FILE_PATH)
 	elapsed := time.Since(start)
 	endLoading(ch)
 	fmt.Printf("Downloads deleted! %s\n\n", elapsed)
 }
 
-func exitCmd() {
-	fmt.Println("Goodbye!")
+func ExitCmd() {
+	fmt.Println("Au revoir!")
 	os.Exit(0)
 }
 
-func deleteTestFiles() {
-	fileutil.RemoveDir(TEST_FILE_PATH)
-	fileutil.MakeDir(TEST_FILE_PATH)
-}
-
-func deleteDownloads() {
-	fileutil.RemoveDir(DOWNLOAD_FILE_PATH)
-	fileutil.MakeDir(DOWNLOAD_FILE_PATH)
+func deleteFilesInDir(path string) {
+	fileutil.RemoveDir(path)
+	fileutil.MakeDir(path)
 }
 
 func startLoading(text string) chan bool {

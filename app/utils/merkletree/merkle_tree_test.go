@@ -23,8 +23,8 @@ func TestBuildTree(t *testing.T) {
 		leafHashes = append(leafHashes, hash[:])
 	}
 
-	root := BuildTree(leafHashes)
-	got := hex.EncodeToString(root.Hash[:])
+	BuildTree(leafHashes)
+	got := hex.EncodeToString(Root.Hash[:])
 	want := "1726c9d7c9f5585c6657edb9f5de6ee2f14c447d2fb80c9083a2572857702912"
 
 	if got != want {
@@ -43,10 +43,10 @@ func TestCreateMerkleProof(t *testing.T) {
 		hash := sha256.Sum256([]byte(leaf))
 		leafHashes = append(leafHashes, hash[:])
 	}
-	root := BuildTree(leafHashes)
+	BuildTree(leafHashes)
 
 	leafHash := sha256.Sum256([]byte("hash3"))
-	proof, err := CreateMerkleProof(root, leafHash[:])
+	proof, err := CreateMerkleProof(Root, leafHash[:])
 	if err != nil {
 		t.Errorf("returned unexpected error: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestCreateMerkleProof(t *testing.T) {
 	}
 
 	invalidHash := []byte("invalidhash")
-	_, err = CreateMerkleProof(root, invalidHash)
+	_, err = CreateMerkleProof(Root, invalidHash)
 	if err == nil {
 		t.Error("expected an error for invalid hash")
 	}
@@ -72,18 +72,18 @@ func TestVerifyMerkleProof(t *testing.T) {
 		hash := sha256.Sum256([]byte(leaf))
 		leafHashes = append(leafHashes, hash[:])
 	}
-	root := BuildTree(leafHashes)
+	BuildTree(leafHashes)
 
 	leafHash := sha256.Sum256([]byte("hash3"))
-	proof, _ := CreateMerkleProof(root, leafHash[:])
+	proof, _ := CreateMerkleProof(Root, leafHash[:])
 
-	valid, _ := VerifyMerkleProof(root.Hash, leafHash[:], proof)
+	valid, _ := VerifyMerkleProof(Root.Hash, leafHash[:], proof)
 	if !valid {
 		t.Error("Eepected true for valid hash")
 	}
 
 	proof[0].Hash = []byte("invalidHash")
-	valid, _ = VerifyMerkleProof(root.Hash, leafHash[:], proof)
+	valid, _ = VerifyMerkleProof(Root.Hash, leafHash[:], proof)
 	if valid {
 		t.Error("expected false for invalid hash")
 	}

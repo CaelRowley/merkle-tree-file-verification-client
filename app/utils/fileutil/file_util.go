@@ -25,16 +25,14 @@ func RemoveDir(path string) {
 	if err != nil {
 		fmt.Println(err)
 	}
-
 }
 
 func WriteDummyFiles(path string, amount int) {
 	maxGoroutines := 8
 	sem := make(chan struct{}, maxGoroutines)
-
 	var wg sync.WaitGroup
-
 	wg.Add(amount)
+
 	for i := 0; i < amount; i++ {
 		sem <- struct{}{}
 		go func(i int) {
@@ -89,11 +87,9 @@ func GetFiles(path string) []File {
 			}
 			log.Fatal(err)
 		}
-
 		if len(dirs) == 0 {
 			break
 		}
-
 		allDirs = append(allDirs, dirs...)
 	}
 

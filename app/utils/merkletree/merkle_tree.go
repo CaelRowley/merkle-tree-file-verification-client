@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var Root *Node
+
 type MerkleTree struct {
 	ID   uuid.UUID
 	Root *Node
@@ -26,7 +28,7 @@ type ProofSibling struct {
 	IsLeft bool
 }
 
-func BuildTree(hashes [][]byte) *Node {
+func BuildTree(hashes [][]byte) {
 	var currentLevel []*Node
 
 	for _, hash := range hashes {
@@ -54,7 +56,7 @@ func BuildTree(hashes [][]byte) *Node {
 		currentLevel = nextLevel
 	}
 
-	return currentLevel[0]
+	Root = currentLevel[0]
 }
 
 func CreateMerkleProof(root *Node, hash []byte) (MerkleProof, error) {
