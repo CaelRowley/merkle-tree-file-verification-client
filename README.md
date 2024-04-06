@@ -1,6 +1,10 @@
 # Merkle Tree File Verification Client
 
-A simple CLI tool for demonstrating the functionality of a Merkle tree. The tool allows users to create test files, generate a Merkle tree from these files, upload files to a server, download files from the server along with their Merkle proofs, and verify file integrity using the stored Merkle tree root hash.
+A simple CLI tool built with Go for demonstrating the functionality of a Merkle tree. The tool allows users to create test files, generate a Merkle tree from these files, upload files to a server, download files from the server along with their Merkle proofs, and verify file integrity using the stored Merkle tree root hash.
+
+This tool is written to be used in conjuction with the [Merkle Tree File Verification Backend
+](https://gitlab.com/CaelRowley/merkel-tree-file-verification-backend).
+
 
 ## Commands
 
