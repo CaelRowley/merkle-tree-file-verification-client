@@ -15,7 +15,7 @@ import (
 )
 
 func UploadFiles(url string, files []fileutil.File) error {
-	batchSize := 10000
+	batchSize := 1000
 
 	batchId, err := uuid.NewV7()
 	if err != nil {
@@ -26,7 +26,8 @@ func UploadFiles(url string, files []fileutil.File) error {
 
 	for i := 0; i < len(files); i += batchSize {
 		end := i + batchSize
-		if end > len(files) {
+		if end >= len(files) {
+			requestUrl = fmt.Sprintf("%s?batch-complete=%t", requestUrl, true)
 			end = len(files)
 		}
 
@@ -124,6 +125,10 @@ func CorruptFile(url string, id string, file []byte) error {
 		return err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusNotFound {
+		return errors.New("No file found for id: " + id)
+	}
 
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("server responded with non-OK status: %d", res.StatusCode)
