@@ -45,7 +45,8 @@ func CreateFilesCmd() {
 	elapsed := time.Since(start)
 	endLoading(chLoading)
 
-	fmt.Printf("%d test files created %s\n\n", amount, elapsed)
+	cwd, _ := os.Getwd()
+	fmt.Printf("%d test files created in:\n%s%s %s\n\n", amount, cwd, TEST_FILE_PATH, elapsed)
 }
 
 func CreateTreeCmd() {
@@ -148,7 +149,8 @@ func DownloadAndVerifyFileCmd(serverURL string) {
 
 	fileHash := sha256.Sum256(fileData)
 	elapsed := time.Since(start)
-	fmt.Printf("Downloaded file %s to: %s %s\n", input, filePath, elapsed)
+	cwd, _ := os.Getwd()
+	fmt.Printf("Downloaded file %s to:\n%s%s %s\n", input, cwd, filePath, elapsed)
 
 	start = time.Now()
 	isVerified, proofRoot := merkletree.VerifyMerkleProof(merkletree.Root.Hash, fileHash[:], proof)
@@ -159,9 +161,9 @@ func DownloadAndVerifyFileCmd(serverURL string) {
 	fmt.Printf("Stored root hash: %s\n", rootHash)
 	fmt.Printf("Proof root hash:  %s\n", proofRootHash)
 	if isVerified {
-		fmt.Printf("The hashes match!\n%s has not been modified\n", filePath)
+		fmt.Printf("The hashes match!\n%s has not been modified\n", fileName)
 	} else {
-		fmt.Printf("The hashes don't match!\n%s has been corrupted\n", filePath)
+		fmt.Printf("The hashes don't match!\n%s has been corrupted\n", fileName)
 	}
 }
 
