@@ -35,10 +35,26 @@ This tool is written to be used in conjuction with the [Merkle Tree File Verific
 - **Exit**
   - Closes the CLI tool.
 
+## Environment Variables
+
+- **SERVER_URL**
+  - This variable specifies the URL of the backend server that the client should communicate with.
+  - Default value: `http://localhost:8080` (points to the default port of running the [backend service]((https://gitlab.com/CaelRowley/merkel-tree-file-verification-backend)) locally).
+  - If you want to connect to a deployed backend, set `SERVER_URL` to the URL of your backend:
+
+    In a Unix/Linux terminal:
+    ```bash
+    export SERVER_URL=http://your-backend.com
+    ```
+
+    In a Windows command prompt:
+    ```cmd
+    set SERVER_URL=http://your-backend.com
+    ```
+
 ## Usage
 
-
-After cloning the repository you can use this tool by running it locally or by using Docker:
+After cloning the repository you can use this tool by running it locally or by using Docker.
 
 ### Running locally
 
@@ -51,6 +67,7 @@ go run ./app/main.go
 ### Running with Docker Compose
 
 **⚠️ Prerequisites:** Make sure you have [Docker](https://docs.docker.com/desktop/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your machine.
+
 
 **Step 1:** Build the Docker Image (if needed)
 
@@ -88,4 +105,11 @@ docker-compose -f docker-compose.yml run client
 
 7. **Cleanup**
    - Clean up local files and downloads using `Delete Test Files` and `Delete Downloads` as needed.
+
+
+
+Certainly! Here's an example of how you can add an environment variable section to your README file explaining the `SERVER_URL` variable for your Go project:
+
+---
+
 

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/manifoldco/promptui"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/api"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/commands"
 )
 
@@ -15,6 +16,9 @@ func main() {
 	if serverURL == "" {
 		serverURL = "http://localhost:8080"
 	}
+
+	// To wake up the server (it sleeps when inactive)
+	go api.Ping(serverURL)
 
 	const createFilesCmdText = "Create Test Files"
 	const createTreeCmdText = "Generate Merkle Tree"

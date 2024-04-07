@@ -155,3 +155,12 @@ func CorruptFile(url string, id string, file []byte) error {
 
 	return nil
 }
+
+func Ping(url string) error {
+	_, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
