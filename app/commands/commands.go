@@ -15,12 +15,13 @@ import (
 )
 
 const (
-	TEST_FILE_PATH     = "files/test"
-	DOWNLOAD_FILE_PATH = "files/downloads"
-	CORRUPT_FILE_PATH  = "files/corrupt.txt"
+	TestFilePath     = "files/test"
+	DownloadFilePath = "files/downloads"
+	CorruptFilePath  = "files/corrupt.txt"
 )
 
 func CreateFilesCmd() {
+	fileutil.MakeDir(TestFilePath)
 	prompt := promptui.Prompt{
 		Label: "Amount to create",
 	}
@@ -36,23 +37,23 @@ func CreateFilesCmd() {
 	}
 
 	chLoading := startLoading("Deleting previous test files")
-	deleteFilesInDir(TEST_FILE_PATH)
+	deleteFilesInDir(TestFilePath)
 	endLoading(chLoading)
 
 	chLoading = startLoading(fmt.Sprintf("Creating %d test files", amount))
 	start := time.Now()
-	fileutil.WriteDummyFiles(TEST_FILE_PATH, amount)
+	fileutil.WriteDummyFiles(TestFilePath, amount)
 	elapsed := time.Since(start)
 	endLoading(chLoading)
 
 	cwd, _ := os.Getwd()
-	fmt.Printf("%d test files created in:\n%s/%s %s\n", amount, cwd, TEST_FILE_PATH, elapsed)
+	fmt.Printf("%d test files created in:\n%s/%s %s\n", amount, cwd, TestFilePath, elapsed)
 }
 
 func CreateTreeCmd() {
 	start := time.Now()
 	chLoading := startLoading("Reading files and hashing data")
-	files := fileutil.GetFiles(TEST_FILE_PATH)
+	files := fileutil.GetFiles(TestFilePath)
 	if len(files) < 1 {
 		endLoading(chLoading)
 		fmt.Println("Please create some test files first.")
@@ -82,7 +83,7 @@ func CreateTreeCmd() {
 func UploadFilesCmd(serverURL string) {
 	chLoading := startLoading("Reading test files")
 	start := time.Now()
-	files := fileutil.GetFiles(TEST_FILE_PATH)
+	files := fileutil.GetFiles(TestFilePath)
 	elapsed := time.Since(start)
 	endLoading(chLoading)
 
@@ -114,6 +115,7 @@ func UploadFilesCmd(serverURL string) {
 }
 
 func DownloadAndVerifyFileCmd(serverURL string) {
+	fileutil.MakeDir(DownloadFilePath)
 	if merkletree.Root == nil {
 		fmt.Println("You need to Generate a Merkle tree first.")
 		return
@@ -140,7 +142,7 @@ func DownloadAndVerifyFileCmd(serverURL string) {
 		return
 	}
 
-	filePath := DOWNLOAD_FILE_PATH + "/" + fileName
+	filePath := DownloadFilePath + "/" + fileName
 	err = os.WriteFile(filePath, fileData, 0644)
 	if err != nil {
 		fmt.Println("Error getting file with id:", input, ":", err)
@@ -189,7 +191,7 @@ func CorruptFileCmd(serverURL string) {
 	}
 
 	start := time.Now()
-	file, err := fileutil.GetFile(CORRUPT_FILE_PATH)
+	file, err := fileutil.GetFile(CorruptFilePath)
 	if err != nil {
 		fmt.Println("Error getting corrupt file:", err)
 		return
@@ -207,7 +209,7 @@ func CorruptFileCmd(serverURL string) {
 func DeleteTestFilesCmd() {
 	ch := startLoading("Deleting test files")
 	start := time.Now()
-	deleteFilesInDir(TEST_FILE_PATH)
+	deleteFilesInDir(TestFilePath)
 	elapsed := time.Since(start)
 	endLoading(ch)
 	fmt.Printf("Test files deleted! %s\n", elapsed)
@@ -216,7 +218,7 @@ func DeleteTestFilesCmd() {
 func DeleteDownloadsCmd() {
 	start := time.Now()
 	ch := startLoading("Deleting downloads")
-	deleteFilesInDir(DOWNLOAD_FILE_PATH)
+	deleteFilesInDir(DownloadFilePath)
 	elapsed := time.Since(start)
 	endLoading(ch)
 	fmt.Printf("Downloads deleted! %s\n", elapsed)

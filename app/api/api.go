@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/fileutil"
@@ -15,7 +16,9 @@ import (
 )
 
 func UploadFiles(url string, files []fileutil.File) error {
-	batchSize := 1000
+	const defaultBatchSize = 5000
+	const retryInterval = 100 * time.Millisecond
+	const retryTimeout = 30 * time.Second
 
 	batchId, err := uuid.NewV7()
 	if err != nil {
@@ -23,30 +26,46 @@ func UploadFiles(url string, files []fileutil.File) error {
 	}
 
 	requestUrl := fmt.Sprintf("%s/files/upload-batch/%s", url, batchId)
+	currentBatchSize := defaultBatchSize
+	for i := 0; i < len(files); i += currentBatchSize {
+		currentBatchSize = defaultBatchSize
+		start := time.Now()
+		elapsed := 0 * time.Second
 
-	for i := 0; i < len(files); i += batchSize {
-		end := i + batchSize
-		if end >= len(files) {
-			requestUrl = fmt.Sprintf("%s?batch-complete=%t", requestUrl, true)
-			end = len(files)
-		}
+		for elapsed < retryTimeout {
+			end := i + currentBatchSize
+			if end >= len(files) {
+				requestUrl = fmt.Sprintf("%s?batch-complete=%t", requestUrl, true)
+				end = len(files)
+			}
 
-		batch := files[i:end]
-		jsonData, err := json.Marshal(batch)
-		if err != nil {
-			return err
-		}
-		res, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
+			batch := files[i:end]
 
-		if res.StatusCode != http.StatusOK {
-			return fmt.Errorf("server responded with non-OK status: %d", res.StatusCode)
+			jsonData, err := json.Marshal(batch)
+			if err != nil {
+				return err
+			}
+			res, err := http.Post(requestUrl, "application/json", bytes.NewBuffer(jsonData))
+			if err != nil {
+				return err
+			}
+			defer res.Body.Close()
+
+			if res.StatusCode == http.StatusOK {
+				break
+			}
+
+			elapsed = time.Since(start)
+
+			if elapsed >= retryTimeout {
+				return fmt.Errorf("server responded with non-OK status: %d retrying will smaller batch %d", res.StatusCode, currentBatchSize)
+			}
+
+			currentBatchSize = max(currentBatchSize/2, 1)
+			fmt.Println(fmt.Errorf("server responded with non-OK status: %d (Timeout: %s exceeded)", res.StatusCode, retryTimeout))
+			time.Sleep(retryInterval)
 		}
 	}
-
 	return nil
 }
 

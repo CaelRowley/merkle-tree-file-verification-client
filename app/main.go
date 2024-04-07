@@ -16,24 +16,24 @@ func main() {
 		serverURL = "http://localhost:8080"
 	}
 
-	const CREATE_FILES_CMD = "Create Test Files"
-	const CREATE_TREE_COMMAND = "Generate Merkle Tree"
-	const UPLOAD_FILES_CMD = "Upload Test Files"
-	const DELETE_TEST_FILES_CMD = "Delete Local Test Files"
-	const DELETE_DOWNLOADS_CMD = "Delete Downloads"
-	const DOWNLOAD_AND_VERIFY_FILE_CMD = "Download and Verify File"
-	const CORRUPT_FILE_CMD = "Corrupt a File on Server"
-	const EXIT_CMD = "Exit"
+	const createFilesCmdText = "Create Test Files"
+	const createTreeCmdText = "Generate Merkle Tree"
+	const uploadFilesCmdText = "Upload Test Files"
+	const deleteTestFilesCmdText = "Delete Local Test Files"
+	const deleteDownloadCmdText = "Delete Downloads"
+	const downloadAndVerifyFileCmdText = "Download and Verify File"
+	const corruptFileCmdText = "Corrupt a File on Server"
+	const exitCmdText = "Exit"
 
 	items := []string{
-		CREATE_FILES_CMD,
-		CREATE_TREE_COMMAND,
-		UPLOAD_FILES_CMD,
-		DOWNLOAD_AND_VERIFY_FILE_CMD,
-		CORRUPT_FILE_CMD,
-		DELETE_TEST_FILES_CMD,
-		DELETE_DOWNLOADS_CMD,
-		EXIT_CMD,
+		createFilesCmdText,
+		createTreeCmdText,
+		uploadFilesCmdText,
+		downloadAndVerifyFileCmdText,
+		corruptFileCmdText,
+		deleteTestFilesCmdText,
+		deleteDownloadCmdText,
+		exitCmdText,
 	}
 
 	prompt := promptui.Select{
@@ -49,21 +49,21 @@ func main() {
 		}
 
 		switch selected {
-		case CREATE_FILES_CMD:
+		case createFilesCmdText:
 			commands.CreateFilesCmd()
-		case CREATE_TREE_COMMAND:
+		case createTreeCmdText:
 			commands.CreateTreeCmd()
-		case UPLOAD_FILES_CMD:
+		case uploadFilesCmdText:
 			commands.UploadFilesCmd(serverURL)
-		case DELETE_TEST_FILES_CMD:
+		case deleteTestFilesCmdText:
 			commands.DeleteTestFilesCmd()
-		case DELETE_DOWNLOADS_CMD:
+		case deleteDownloadCmdText:
 			commands.DeleteDownloadsCmd()
-		case DOWNLOAD_AND_VERIFY_FILE_CMD:
+		case downloadAndVerifyFileCmdText:
 			commands.DownloadAndVerifyFileCmd(serverURL)
-		case CORRUPT_FILE_CMD:
+		case corruptFileCmdText:
 			commands.CorruptFileCmd(serverURL)
-		case EXIT_CMD:
+		case exitCmdText:
 			commands.ExitCmd()
 		}
 

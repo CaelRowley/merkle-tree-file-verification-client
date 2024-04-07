@@ -23,9 +23,8 @@ This tool is written to be used in conjuction with the [Merkle Tree File Verific
   - Verifies the integrity of the downloaded file using the Merkle proof and the stored root hash.
 
 - **Corrupt a File on Server**
-  - Simulates file corruption on the server by modifying the data while keeping the hash unchanged.
-  - Demonstrates how the client's verification process detects file tampering using Merkle proofs.
-  - Download and verify the same file to see the Merkle proof fail to generate the correct hash.
+  - Simulates file corruption on the server by modifying the data while keeping a reference to the original hash.
+  - Demonstrates how the client's verification process detects file tampering using a Merkle proof.
 
 - **Delete Test Files**
   - Deletes all locally created test files.
@@ -39,7 +38,7 @@ This tool is written to be used in conjuction with the [Merkle Tree File Verific
 ## Usage
 
 
-After cloning the repository you can use this tool by running it locally or by using docker:
+After cloning the repository you can use this tool by running it locally or by using Docker:
 
 ### Running locally
 

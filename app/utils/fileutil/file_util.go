@@ -28,7 +28,7 @@ func RemoveDir(path string) {
 }
 
 func WriteDummyFiles(path string, amount int) {
-	maxGoroutines := 8
+	maxGoroutines := 4
 	sem := make(chan struct{}, maxGoroutines)
 	var wg sync.WaitGroup
 	wg.Add(amount)
