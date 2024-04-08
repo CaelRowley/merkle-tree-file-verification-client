@@ -16,7 +16,7 @@ import (
 )
 
 func UploadFiles(url string, files []fileutil.File) error {
-	const defaultBatchSize = 5000
+	const defaultBatchSize = 4000
 	const retryInterval = 100 * time.Millisecond
 	const retryTimeout = 30 * time.Second
 
@@ -29,6 +29,7 @@ func UploadFiles(url string, files []fileutil.File) error {
 	currentBatchSize := defaultBatchSize
 	for i := 0; i < len(files); i += currentBatchSize {
 		currentBatchSize = defaultBatchSize
+		attemptCount := 0
 		start := time.Now()
 		elapsed := 0 * time.Second
 
@@ -58,11 +59,12 @@ func UploadFiles(url string, files []fileutil.File) error {
 			elapsed = time.Since(start)
 
 			if elapsed >= retryTimeout {
-				return fmt.Errorf("server responded with non-OK status: %d retrying will smaller batch %d", res.StatusCode, currentBatchSize)
+				return fmt.Errorf("server responded with non-OK status: %d (Timeout: %s exceeded)", res.StatusCode, retryTimeout)
 			}
 
 			currentBatchSize = max(currentBatchSize/2, 1)
-			fmt.Println(fmt.Errorf("server responded with non-OK status: %d (Timeout: %s exceeded)", res.StatusCode, retryTimeout))
+			attemptCount += 1
+			fmt.Println(fmt.Errorf("error code: %d retrying will smaller batch size %d (attempt: %d)", res.StatusCode, currentBatchSize, attemptCount))
 			time.Sleep(retryInterval)
 		}
 	}
