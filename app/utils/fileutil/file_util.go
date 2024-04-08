@@ -27,7 +27,7 @@ func RemoveDir(path string) {
 	}
 }
 
-func WriteDummyFiles(path string, amount int) {
+func WriteDummyFiles(path string, amount int, ch chan<- int) {
 	maxGoroutines := 4
 	sem := make(chan struct{}, maxGoroutines)
 	var wg sync.WaitGroup
@@ -41,10 +41,12 @@ func WriteDummyFiles(path string, amount int) {
 			fileName := fmt.Sprintf("%d.txt", i)
 			fileContent := fmt.Sprintf("Hello %d", i)
 			WriteFile(path, fileName, fileContent)
+			ch <- i
 		}(i)
 	}
 
 	wg.Wait()
+	fmt.Println("finished")
 }
 
 func WriteFile(path string, name string, content string) {

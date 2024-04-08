@@ -40,11 +40,11 @@ func CreateFilesCmd() {
 	deleteFilesInDir(TestFilePath)
 	endLoading(chLoading)
 
-	chLoading = startLoading(fmt.Sprintf("Creating %d test files", amount))
+	chLoading, chCount := startLoadingWithCount(fmt.Sprintf("Creating %d/%d test files", 0, amount), amount)
 	start := time.Now()
-	fileutil.WriteDummyFiles(TestFilePath, amount)
+	fileutil.WriteDummyFiles(TestFilePath, amount, chCount)
 	elapsed := time.Since(start)
-	endLoading(chLoading)
+	endLoadingWithCount(chLoading, chCount)
 
 	cwd, _ := os.Getwd()
 	fmt.Printf("%d test files created in:\n%s/%s %s\n", amount, cwd, TestFilePath, elapsed)
@@ -256,7 +256,45 @@ func startLoading(text string) chan bool {
 	return ch
 }
 
+func startLoadingWithCount(text string, total int) (chan bool, chan int) {
+	ch := make(chan bool)
+	chCount := make(chan int)
+	dots := []string{text + "   ", text + ".  ", text + ".. ", text + "..."}
+	count := 0
+	go func() {
+		for {
+			count = <-chCount
+			text = fmt.Sprintf("Creating %d/%d test files", count, total)
+			dots = []string{text + "   ", text + ".  ", text + ".. ", text + "..."}
+
+		}
+	}()
+
+	go func() {
+		for {
+			for _, dot := range dots {
+				select {
+				case <-ch:
+					fmt.Print("\r\033[K")
+					return
+				default:
+					fmt.Printf("\r%s", dot)
+					time.Sleep(200 * time.Millisecond)
+				}
+			}
+		}
+	}()
+
+	return ch, chCount
+}
+
 func endLoading(ch chan bool) {
 	close(ch)
+	fmt.Print("\r\033[K")
+}
+
+func endLoadingWithCount(ch chan bool, chFiles chan int) {
+	close(ch)
+	close(chFiles)
 	fmt.Print("\r\033[K")
 }
