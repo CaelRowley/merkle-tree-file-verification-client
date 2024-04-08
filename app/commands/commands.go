@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -77,7 +78,7 @@ func CreateTreeCmd() {
 		fileHashes = append(fileHashes, fileHash[:])
 	}
 	sort.Slice(fileHashes, func(i int, j int) bool {
-		return string(fileHashes[i]) < string(fileHashes[j])
+		return bytes.Compare(fileHashes[i], fileHashes[j]) < 0
 	})
 	elapsed = time.Since(start)
 	endLoading(chLoading)
