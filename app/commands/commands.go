@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	TestFilePath     = "files/test"
+	TestFilePath     = "files/dummy"
 	DownloadFilePath = "files/downloads"
 	CorruptFilePath  = "files/corrupt.txt"
 )
@@ -51,6 +52,7 @@ func CreateFilesCmd() {
 }
 
 func CreateTreeCmd() {
+	fileutil.MakeDir(TestFilePath)
 	start := time.Now()
 	chLoading := startLoading("Reading files and hashing data")
 	files := fileutil.GetFiles(TestFilePath)
@@ -65,6 +67,11 @@ func CreateTreeCmd() {
 		fileHash := sha256.Sum256([]byte(file.Data))
 		fileHashes = append(fileHashes, fileHash[:])
 	}
+
+	sort.Slice(fileHashes, func(i int, j int) bool {
+		return string(fileHashes[i]) < string(fileHashes[j])
+	})
+
 	elapsed := time.Since(start)
 	endLoading(chLoading)
 	fmt.Printf("Files hashed %s\n", elapsed)
@@ -81,6 +88,7 @@ func CreateTreeCmd() {
 }
 
 func UploadFilesCmd(serverURL string) {
+	fileutil.MakeDir(TestFilePath)
 	chLoading := startLoading("Reading test files")
 	start := time.Now()
 	files := fileutil.GetFiles(TestFilePath)
@@ -266,7 +274,6 @@ func startLoadingWithCount(text string, total int) (chan bool, chan int) {
 			count = <-chCount
 			text = fmt.Sprintf("Creating %d/%d test files", count, total)
 			dots = []string{text + "   ", text + ".  ", text + ".. ", text + "..."}
-
 		}
 	}()
 

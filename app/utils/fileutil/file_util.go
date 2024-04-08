@@ -2,9 +2,7 @@ package fileutil
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"sort"
 	"sync"
 )
 
@@ -46,7 +44,6 @@ func WriteDummyFiles(path string, amount int, ch chan<- int) {
 	}
 
 	wg.Wait()
-	fmt.Println("finished")
 }
 
 func WriteFile(path string, name string, content string) {
@@ -76,7 +73,7 @@ func GetFiles(path string) []File {
 	pageSize := 1024
 	dir, err := os.Open(path)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	defer dir.Close()
 
@@ -87,7 +84,7 @@ func GetFiles(path string) []File {
 			if err.Error() == "EOF" {
 				break
 			}
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 		if len(dirs) == 0 {
 			break
@@ -95,15 +92,11 @@ func GetFiles(path string) []File {
 		allDirs = append(allDirs, dirs...)
 	}
 
-	sort.Slice(allDirs, func(i int, j int) bool {
-		return allDirs[i].Name() < allDirs[j].Name()
-	})
-
 	var allFiles []File
 	for _, dir := range allDirs {
 		file, err := GetFile(path + "/" + dir.Name())
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 		newFile := File{
 			Name: dir.Name(),
