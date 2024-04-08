@@ -69,7 +69,7 @@ func GetFile(path string) ([]byte, error) {
 	return data, nil
 }
 
-func GetFiles(path string) []File {
+func GetFiles(path string, ch chan<- int) []File {
 	pageSize := 1024
 	dir, err := os.Open(path)
 	if err != nil {
@@ -93,7 +93,7 @@ func GetFiles(path string) []File {
 	}
 
 	var allFiles []File
-	for _, dir := range allDirs {
+	for i, dir := range allDirs {
 		file, err := GetFile(path + "/" + dir.Name())
 		if err != nil {
 			fmt.Println(err)
@@ -103,6 +103,7 @@ func GetFiles(path string) []File {
 			Data: file,
 		}
 		allFiles = append(allFiles, newFile)
+		ch <- i
 	}
 
 	return allFiles

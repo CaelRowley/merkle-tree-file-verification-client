@@ -15,7 +15,7 @@ import (
 	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/merkletree"
 )
 
-func UploadFiles(url string, files []fileutil.File) error {
+func UploadFiles(url string, files []fileutil.File, ch chan<- int) error {
 	const defaultBatchSize = 4000
 	const retryInterval = 100 * time.Millisecond
 	const retryTimeout = 30 * time.Second
@@ -53,6 +53,7 @@ func UploadFiles(url string, files []fileutil.File) error {
 			defer res.Body.Close()
 
 			if res.StatusCode == http.StatusOK {
+				ch <- end
 				break
 			}
 

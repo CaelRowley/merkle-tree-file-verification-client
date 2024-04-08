@@ -37,14 +37,17 @@ func CreateFilesCmd() {
 		return
 	}
 
-	chLoading := startLoading("Deleting previous test files")
-	deleteFilesInDir(TestFilePath)
-	endLoading(chLoading)
-
-	chLoading, chCount := startLoadingWithCount(fmt.Sprintf("Creating %d/%d test files", 0, amount), amount)
+	ch := startLoading("Deleting previous test files")
 	start := time.Now()
-	fileutil.WriteDummyFiles(TestFilePath, amount, chCount)
+	deleteFilesInDir(TestFilePath)
 	elapsed := time.Since(start)
+	endLoading(ch)
+	fmt.Printf("Test files deleted! %s\n", elapsed)
+
+	chLoading, chCount := startLoadingWithCount("Creating %d/%d test files", amount)
+	start = time.Now()
+	fileutil.WriteDummyFiles(TestFilePath, amount, chCount)
+	elapsed = time.Since(start)
 	endLoadingWithCount(chLoading, chCount)
 
 	cwd, _ := os.Getwd()
@@ -53,26 +56,30 @@ func CreateFilesCmd() {
 
 func CreateTreeCmd() {
 	fileutil.MakeDir(TestFilePath)
+
+	chLoading, chCount := startLoadingWithCount("Reading %d files", 0)
 	start := time.Now()
-	chLoading := startLoading("Reading files and hashing data")
-	files := fileutil.GetFiles(TestFilePath)
+	files := fileutil.GetFiles(TestFilePath, chCount)
+	elapsed := time.Since(start)
+	endLoadingWithCount(chLoading, chCount)
+	fmt.Printf("Files read %s\n", elapsed)
+
 	if len(files) < 1 {
-		endLoading(chLoading)
 		fmt.Println("Please create some test files first.")
 		return
 	}
 
+	chLoading = startLoading("Hashing files")
+	start = time.Now()
 	var fileHashes [][]byte
 	for _, file := range files {
 		fileHash := sha256.Sum256([]byte(file.Data))
 		fileHashes = append(fileHashes, fileHash[:])
 	}
-
 	sort.Slice(fileHashes, func(i int, j int) bool {
 		return string(fileHashes[i]) < string(fileHashes[j])
 	})
-
-	elapsed := time.Since(start)
+	elapsed = time.Since(start)
 	endLoading(chLoading)
 	fmt.Printf("Files hashed %s\n", elapsed)
 
@@ -82,25 +89,25 @@ func CreateTreeCmd() {
 	rootHash := hex.EncodeToString(merkletree.Root.Hash[:])
 	elapsed = time.Since(start)
 	endLoading(chLoading)
-
 	fmt.Printf("Generated Merkle tree %s\n", elapsed)
+
 	fmt.Printf("Root hash: %s\n", rootHash)
 }
 
 func UploadFilesCmd(serverURL string) {
 	fileutil.MakeDir(TestFilePath)
-	chLoading := startLoading("Reading test files")
+
+	chLoading, chCount := startLoadingWithCount("Reading %d files", 0)
 	start := time.Now()
-	files := fileutil.GetFiles(TestFilePath)
+	files := fileutil.GetFiles(TestFilePath, chCount)
 	elapsed := time.Since(start)
-	endLoading(chLoading)
+	endLoadingWithCount(chLoading, chCount)
+	fmt.Printf("%d test files read %s\n", len(files), elapsed)
 
 	if len(files) < 1 {
 		fmt.Println("Please create some test files first.")
 		return
 	}
-
-	fmt.Printf("%d test files read %s\n", len(files), elapsed)
 
 	err := api.DeleteAllFiles(serverURL)
 	if err != nil {
@@ -109,21 +116,23 @@ func UploadFilesCmd(serverURL string) {
 	}
 	fmt.Println("Deleted all files in the DB!")
 
-	chLoading = startLoading(fmt.Sprintf("Uploading %d files", len(files)))
+	chLoading, chCount = startLoadingWithCount("Uploading %d files", 0)
 	start = time.Now()
-	err = api.UploadFiles(serverURL, files)
-	endLoading(chLoading)
+	err = api.UploadFiles(serverURL, files, chCount)
+	elapsed = time.Since(start)
+	endLoadingWithCount(chLoading, chCount)
 	if err != nil {
 		fmt.Println("Error sending the files to the server:", err)
 		return
 	}
-	elapsed = time.Since(start)
+
 	fmt.Printf("Uploaded %d files! %s\n", len(files), elapsed)
 	fmt.Printf("IDs range from 1 to %d\n", len(files))
 }
 
 func DownloadAndVerifyFileCmd(serverURL string) {
 	fileutil.MakeDir(DownloadFilePath)
+
 	if merkletree.Root == nil {
 		fmt.Println("You need to Generate a Merkle tree first.")
 		return
@@ -163,10 +172,11 @@ func DownloadAndVerifyFileCmd(serverURL string) {
 		return
 	}
 
-	fileHash := sha256.Sum256(fileData)
 	elapsed := time.Since(start)
 	cwd, _ := os.Getwd()
-	fmt.Printf("Downloaded file %s to:\n%s/%s %s\n", input, cwd, filePath, elapsed)
+	fmt.Printf("Downloaded file %s and proof to:\n%s/%s %s\n", input, cwd, filePath, elapsed)
+
+	fileHash := sha256.Sum256(fileData)
 
 	start = time.Now()
 	isVerified, proofRoot := merkletree.VerifyMerkleProof(merkletree.Root.Hash, fileHash[:], proof)
@@ -211,6 +221,7 @@ func CorruptFileCmd(serverURL string) {
 		return
 	}
 	elapsed := time.Since(start)
+
 	fmt.Printf("File %s has been modified on the server! %s\n", input, elapsed)
 }
 
@@ -224,8 +235,8 @@ func DeleteTestFilesCmd() {
 }
 
 func DeleteDownloadsCmd() {
-	start := time.Now()
 	ch := startLoading("Deleting downloads")
+	start := time.Now()
 	deleteFilesInDir(DownloadFilePath)
 	elapsed := time.Since(start)
 	endLoading(ch)
@@ -267,13 +278,30 @@ func startLoading(text string) chan bool {
 func startLoadingWithCount(text string, total int) (chan bool, chan int) {
 	ch := make(chan bool)
 	chCount := make(chan int)
-	dots := []string{text + "   ", text + ".  ", text + ".. ", text + "..."}
 	count := 0
+	message := ""
+	if total > 0 {
+		message = fmt.Sprintf(text, count, total)
+	} else {
+		message = fmt.Sprintf(text, count)
+	}
+	dots := []string{message + "   ", message + ".  ", message + ".. ", message + "..."}
+
 	go func() {
 		for {
-			count = <-chCount
-			text = fmt.Sprintf("Creating %d/%d test files", count, total)
-			dots = []string{text + "   ", text + ".  ", text + ".. ", text + "..."}
+			select {
+			case <-ch:
+				fmt.Print("\r\033[K")
+				return
+			default:
+				count = <-chCount
+				if total > 0 {
+					message = fmt.Sprintf(text, count, total)
+				} else {
+					message = fmt.Sprintf(text, count)
+				}
+				dots = []string{message + "   ", message + ".  ", message + ".. ", message + "..."}
+			}
 		}
 	}()
 
