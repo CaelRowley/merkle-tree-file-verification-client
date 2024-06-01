@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/manifoldco/promptui"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/api"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/fileutil"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/merkletree"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/pkg/api"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/pkg/fileutil"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/pkg/merkletree"
 )
 
 const (

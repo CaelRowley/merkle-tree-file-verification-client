@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/fileutil"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/utils/merkletree"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/pkg/fileutil"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/pkg/merkletree"
 )
 
 func UploadFiles(url string, files []fileutil.File, ch chan<- int) error {

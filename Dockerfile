@@ -2,10 +2,10 @@ FROM golang:1.22.1
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
+COPY . .
+
 RUN go mod download && go mod verify
 
-COPY . .
-RUN  go build -o main app/main.go   
+RUN  go build -o main cmd/main.go
 
 CMD ["./main"]

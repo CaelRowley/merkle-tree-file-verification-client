@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/manifoldco/promptui"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/api"
-	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/app/commands"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/pkg/api"
+	"gitlab.com/CaelRowley/merkle-tree-file-verification-client/pkg/commands"
 )
 
 var serverURL = os.Getenv("SERVER_URL")
@@ -71,7 +71,6 @@ func main() {
 			commands.ExitCmd()
 		}
 
-		fmt.Println()
 		fmt.Println()
 	}
 }
