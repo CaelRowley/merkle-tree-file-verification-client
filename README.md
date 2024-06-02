@@ -1,9 +1,53 @@
 # Merkle Tree File Verification Client
 
-A simple CLI tool built with Go for demonstrating the functionality of a Merkle tree. The tool allows users to create test files, generate a Merkle tree from these files, upload files to a server, download files from the server along with their Merkle proofs, and verify file integrity using the stored Merkle tree root hash.
+A simple CLI tool built with Go for demonstrating the functionality of a Merkle tree. The tool allows users to create test files, generate a Merkle tree from these files, upload files to a server, download files from the server along with their Merkle proofs, and verify file integrity using the stored Merkle tree root hash. You can also corrupt a file on the server to further test file verification.
 
 This tool is written to be used in conjuction with the [Merkle Tree File Verification Backend](https://github.com/CaelRowley/merkel-tree-file-verification-backend).
 
+## Environment Variables
+
+- **SERVER_URL**
+  - This specifies the URL of the backend server that the client should communicate with.
+  - Defaults to `http://localhost:8080` (points to the default URL of the [backend service]((https://gitlab.com/CaelRowley/merkel-tree-file-verification-backend)) locally).
+  - If you want to connect to a deployed backend, set `SERVER_URL` to the URL of your backend:
+    ```bash
+    export SERVER_URL=http://your-backend.com
+    ```
+
+## Getting Started
+
+You can run this cli locally with [go](https://go.dev/), [make](https://www.gnu.org/software/make/manual/make.html#Introduction) or [Docker](https://docs.docker.com/).
+
+**⚠️ Prerequisites:** Make sure you have [Go](https://go.dev/doc/install) installed on your machine.
+
+### Running with Go
+
+```bash
+go run ./cmd/main.go
+```
+
+### Running with Make
+
+```bash
+make run
+```
+
+### Running with Docker Compose
+
+**⚠️ Prerequisites:** Make sure you have [Docker](https://docs.docker.com/desktop/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your machine.
+
+
+**Step 1:** Build the Docker Image (if needed)
+
+```bash
+docker-compose -f docker-compose.yml build
+```
+
+**Step 2:** Run the client
+
+```bash
+docker-compose -f docker-compose.yml run client
+```
 
 ## Commands
 
@@ -34,45 +78,6 @@ This tool is written to be used in conjuction with the [Merkle Tree File Verific
 
 - **Exit**
   - Closes the CLI tool.
-
-## Environment Variables
-
-- **SERVER_URL**
-  - This specifies the URL of the backend server that the client should communicate with.
-  - Defaults to `http://localhost:8080` (points to the default URL of the [backend service]((https://gitlab.com/CaelRowley/merkel-tree-file-verification-backend)) locally).
-  - If you want to connect to a deployed backend, set `SERVER_URL` to the URL of your backend:
-    ```bash
-    export SERVER_URL=http://your-backend.com
-    ```
-
-## Getting Started
-
-After cloning the repository you can use this tool by running it locally or by using Docker.
-
-### Running locally
-
-**⚠️ Prerequisites:** Make sure you have [Go](https://go.dev/doc/install) installed on your machine.
-
-```bash
-go run ./app/main.go
-```
-
-### Running with Docker Compose
-
-**⚠️ Prerequisites:** Make sure you have [Docker](https://docs.docker.com/desktop/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your machine.
-
-
-**Step 1:** Build the Docker Image (if needed)
-
-```bash
-docker-compose -f docker-compose.yml build
-```
-
-**Step 2:** Run the client
-
-```bash
-docker-compose -f docker-compose.yml run client
-```
 
 ### Example Workflow
 

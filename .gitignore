@@ -16,7 +16,7 @@
 !Dockerfile
 !docker-compose.yml
 
-# !Makefile
+!Makefile
 
 # ...even if they are in subdirectories
 !*/
